@@ -17,7 +17,7 @@ const isGold = c => c && c.kind === 'sheep' && c.type === 'dorada';
 const cn = c => c.kind === 'sheep' ? 'Alpaca ' + SH[c.type].n : c.kind === 'action' ? ACT[c.type].n : ATK[c.type].n;
 const pub = c => ({ id: c.id, kind: c.kind, type: c.type });
 
-const TIMING = { bot: 900, attack: 1700, nice: 15000, pick: 20000, turn: 120000, turnAway: 6000 };
+const TIMING = { bot: 900, attack: 1700, nice: 15000, pick: 20000, turn: 60000, turnAway: 6000 };
 
 function createGame(seats, opts, hooks) {
   let uid = 0, fid = 0;

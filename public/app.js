@@ -388,10 +388,19 @@ function ask({ title, text = '', html = '', options, cancel = false }) {
   return new Promise((res, rej) => {
     modalRej = rej;
     openModal(`<h3>${title}</h3>${text ? `<p>${esc(text)}</p>` : ''}${html}<div class="opts">${options.map((o, i) => `<button class="opt" data-i="${i}" ${o.disabled ? 'disabled' : ''}>${o.label}</button>`).join('')}${cancel ? '<button class="opt ghost" data-i="-1">Cancelar</button>' : ''}</div>`,
-      e => { const b = e.target.closest('[data-i]'); if (!b) return; const i = +b.dataset.i; modalRej = null; closeModal(); res(i < 0 ? null : options[i].value); });
+      e => {
+        if (e.target === $('#modal')) { modalRej = null; closeModal(); return res(null); } // clic fuera = cancelar
+        const b = e.target.closest('[data-i]'); if (!b) return; const i = +b.dataset.i; modalRej = null; closeModal(); res(i < 0 ? null : options[i].value);
+      });
   }).catch(() => null);
 }
-function info(title, html) { if (activePrompt) return; openModal(`<h3>${title}</h3>${html}<div style="margin-top:14px"><button class="btn" data-close>Cerrar</button></div>`, e => { if (e.target.closest('[data-close]')) closeModal(); }); }
+function info(title, html) { if (activePrompt) return; openModal(`<h3>${title}</h3>${html}<div style="margin-top:14px"><button class="btn" data-close>Cerrar</button></div>`, e => { if (e.target === $('#modal') || e.target.closest('[data-close]')) closeModal(); }); }
+// Escape cierra la ventana abierta igual que un clic fuera (las preguntas del servidor no se cierran así).
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const t = $('#tsheet'); if (t && !t.hidden) return hideSheet();
+  const m = $('#modal'); if (!m.hidden && !activePrompt && m.onclick) m.onclick({ target: m });
+});
 function toast(msg, cls = '') {
   const box = $('#toasts'); if (!box) return;
   const t = document.createElement('div'); t.className = 'toast ' + cls; t.textContent = msg; box.appendChild(t);
@@ -565,7 +574,7 @@ document.addEventListener('click', e => { if (swallowClick) { e.stopImmediatePro
 /* ---------------- reglas ---------------- */
 const RULES = `<div class="rules">
 <h4>Objetivo</h4><ul><li>3 alpacas iguales en tu mano forman un <b>rebaño</b> al instante. Solo un rebaño de cada tipo.</li><li>Gana quien junte los rebaños necesarios (5 con 2–3 jugadores, 4 con 4, 3 con 5–8) <b>sin ninguno desenmascarado</b>.</li><li>O quien junte las <b>3 Alpacas Doradas</b>: victoria instantánea.</li></ul>
-<h4>Tu turno</h4><ul><li>Juega tantas acciones como quieras.</li><li>Cambia 1 carta con el Campo (una vez por turno).</li><li>Compra: paga 2 cartas iguales y toma 1 del Campo (ilimitado).</li><li>Rebaño comodín: 5 alpacas de tipos distintos, una vez y solo en tu turno.</li><li>Roba 1 carta para terminar. Tienes 2 minutos por turno.</li></ul>
+<h4>Tu turno</h4><ul><li>Juega tantas acciones como quieras.</li><li>Cambia 1 carta con el Campo (una vez por turno).</li><li>Compra: paga 2 cartas iguales y toma 1 del Campo (ilimitado).</li><li>Rebaño comodín: 5 alpacas de tipos distintos, una vez y solo en tu turno.</li><li>Roba 1 carta para terminar. Tienes 1 minuto por turno.</li></ul>
 <h4>Ataques</h4><ul><li>Se resuelven al aparecer. Devoran todos los rebaños desenmascarados; si no hay ninguno, todos sufren su efecto secundario.</li><li>Quitas un Desenmascarar de tu rebaño pagando 2 cartas en tu turno.</li></ul>
 <h4>Alpaca Dorada</h4><div class="rrow gold"><img src="img/dorada.webp" alt="Carta Alpaca Dorada"><div><b>Alpaca Dorada</b> <small>Legendaria · ×3</small><p>Junta las 3 en tu mano y ganas al instante. No forma rebaño ni cuenta para el comodín.</p></div></div>
 <h4>Alpacas</h4><div class="rgrid">${SHEEP.map(x => `<div class="ritem"><img src="img/${x.k}.webp" alt="" style="--c:${x.c}"><span><b>${x.n}</b><small>×9 en el mazo</small></span></div>`).join('')}</div>
