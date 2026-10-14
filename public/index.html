@@ -167,6 +167,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;padding-top:12px;border-top:2px dashed var(--line)}
 .hint{font-size:13px;color:var(--muted);flex-basis:100%;margin:0}
 .hint b{color:var(--ink)}
+.bar-end{display:flex;gap:8px;align-items:center;margin-left:auto;flex:none}
+.bar-ops{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 @media (max-width:640px){
   :root{--cw:72px;--ch:102px}
   .card .nm{font-size:11px}.card.action .glyph{width:34px;height:34px;font-size:16px;margin-top:14px}.card.action .cf,.card.attack .cf{display:none}
@@ -431,7 +433,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .me .flock .stk i{width:24px;height:31px;margin-left:-14px}
   .hand{--cw:70px;--ch:96px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;margin-top:2px;padding:16px 10px 4px 16px;min-height:calc(var(--ch) + 22px);scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .hand::-webkit-scrollbar{display:none}
-  .hand .card{flex:none;--ov:-10px!important;transform:none}
+  .hand .card{flex:none;transform:none}
   .hand .card:first-child{margin-left:0}
   .hand .card:hover{transform:none}
   .hand .card.sel{transform:translateY(-12px)}
@@ -442,7 +444,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .hand .card.lp{transition:transform .3s ease,box-shadow .3s ease;transform:translateY(-8px) scale(1.04);box-shadow:0 0 0 3px var(--gold),0 10px 18px rgba(0,0,0,.25)}
   .hand .card .nm{font-size:10px;line-height:1.05;overflow-wrap:anywhere;padding:4px 2px}
   .hand .card .corner{font-size:9px}
-  .bar{position:static;margin:6px 0 0;padding:8px 0 0;gap:6px;background:none;border-radius:0}
+  .bar{position:sticky;bottom:calc(-8px - env(safe-area-inset-bottom,0px));margin:6px 0 0;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));margin-bottom:calc(-8px - env(safe-area-inset-bottom,0px));gap:6px;background:var(--panel);border-radius:0;z-index:6}
+  .bar .bar-end{width:100%}
   .bar .btn{padding:8px 11px;font-size:13px}
   .bar .btn.go{flex:1 1 auto}
   .ttimer{margin-left:0;padding:5px 8px;font-size:12px}
@@ -467,7 +470,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   body.in-game #board{height:100%;min-height:0;flex:1;min-width:0}
   body.in-game .game{height:100%;grid-template-columns:minmax(0,1fr);gap:12px}
   body.in-game #side{height:100%}
-  body.in-game .zone{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
+  body.in-game .zone{min-height:0;min-width:0;display:grid;grid-template-rows:minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr);gap:10px}
+  body.in-game .zone>*,body.in-game .me{min-width:0}
   body.in-game #rivals{flex:none;margin-bottom:10px}
   body.in-game .log{max-height:none;height:100%;position:static;overflow:auto}
   /* rivales en una fila */
@@ -504,9 +508,10 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   body.in-game .hand .card{flex:none}
   body.in-game .hand .card:hover{transform:rotate(0deg) translateY(-12px)}
   body.in-game .hand .card.sel{transform:rotate(0deg) translateY(-16px)}
-  body.in-game .bar{margin-top:6px;padding-top:8px;flex-wrap:nowrap;gap:8px}
+  body.in-game .bar{margin-top:6px;padding-top:8px;flex-wrap:wrap;gap:6px 8px}
+  body.in-game .bar-ops{flex-wrap:nowrap}
   body.in-game .bar .btn{white-space:nowrap;flex:none}
-  body.in-game .hint{flex:1 1 auto;min-width:0;font-size:12.5px;line-height:1.35;margin:0 6px 0 0}
+  body.in-game .hint{flex:1 1 260px;min-width:0;font-size:12.5px;line-height:1.35;margin:0 6px 0 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
   body.in-game .ttimer{margin-left:0;white-space:nowrap;flex:none}
 }
 @media (min-width:641px) and (max-height:700px){
@@ -591,6 +596,34 @@ body.in-lobby .side-tab[data-tab="log"]{display:none}
 .ttimer.bonus{border-color:var(--ok);color:var(--ok);position:relative;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
 .ttimer.bonus::after{content:attr(data-bonus);position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-family:var(--f-display);font-size:14px;color:var(--ok);white-space:nowrap;animation:bonusup 1.4s ease-out forwards}
 @keyframes bonusup{from{opacity:1;transform:translate(-50%,6px)}to{opacity:0;transform:translate(-50%,-14px)}}
+
+/* ---------- emotes ---------- */
+.embtn{display:inline-flex;align-items:center;gap:6px;flex:none}
+.me-head .embtn{width:34px;height:32px;padding:0;justify-content:center}
+.lobby-side h3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lobby-side h3 .embtn{font-family:var(--f-body);font-size:13px;margin-left:auto}
+#emotePop{position:fixed;z-index:88;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px;background:var(--panel);border:2px solid var(--ink);border-radius:18px;box-shadow:0 10px 0 rgba(0,0,0,.18),0 16px 30px rgba(0,0,0,.25);animation:pop .18s ease-out}
+.em-opt{display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid transparent;background:var(--bg);border-radius:12px;padding:6px 6px 4px;min-width:74px}
+.em-opt:hover,.em-opt:focus-visible{border-color:var(--accent)}
+.em-opt b{font-family:var(--f-display);font-weight:400;font-size:12px;line-height:1}
+.em-opt.hot b{color:var(--danger)}
+.em-img{width:48px;height:48px;border-radius:50%;overflow:hidden;display:block;border:2px solid var(--line);background:var(--paper)}
+.em-img img{width:100%;height:100%;object-fit:cover;display:block}
+.em-img.crop img{transform:scale(1.9)}
+.em-bubble{position:fixed;z-index:86;pointer-events:none;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;background:var(--panel);border:2px solid var(--ink);border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,.28);animation:embIn .45s cubic-bezier(.2,1.6,.4,1) both, embFloat 2.6s ease-in-out .45s}
+.em-bubble::after{content:"";position:absolute;bottom:-8px;left:22px;border:7px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.em-bubble .em-img{width:44px;height:44px}
+.em-bubble b{font-family:var(--f-display);font-weight:400;font-size:18px;white-space:nowrap}
+.em-bubble.hot b{color:var(--danger);display:inline-block;animation:mald .3s linear 4}
+.em-bubble.out{animation:embOut .4s ease-in forwards}
+@keyframes embIn{from{transform:scale(.3) translateY(14px);opacity:0}}
+@keyframes embFloat{50%{translate:0 -5px}}
+@keyframes embOut{to{transform:translateY(-14px) scale(.8);opacity:0}}
+@media (max-width:640px){
+  #emotePop{left:8px!important;right:8px;bottom:calc(var(--dock,0px) + 8px);top:auto!important;grid-template-columns:repeat(3,1fr)}
+  .em-opt{min-width:0}
+  .me-head .embtn{width:30px;height:28px}
+}
 </style>
 </head>
 <body>
@@ -624,6 +657,7 @@ body.in-lobby .side-tab[data-tab="log"]{display:none}
 <div id="toasts" aria-live="polite"></div>
 <div id="peek" hidden aria-hidden="true"></div>
 <div id="tsheet" hidden></div>
+<div id="emotePop" hidden role="menu" aria-label="Emotes"></div>
 <div id="net" hidden>Reconectando con el servidor…</div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="music.js?v=__V__"></script>

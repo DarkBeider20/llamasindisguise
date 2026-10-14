@@ -102,6 +102,12 @@
       o.connect(g); g.connect(sfxOut); o.start(t0); o.stop(t0 + 1.2);
     });
   }
+  function popSnd(t) { // burbuja de emote
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(1200, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.015); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    o.connect(g); g.connect(sfxOut); o.start(t); o.stop(t + 0.18);
+  }
   const BASE = () => (document.hidden ? 0 : 0.16);
   function sfx(kind) {
     if (!on || !ctx || !started) return;
@@ -111,6 +117,7 @@
       // baja la música un momento para que se escuche el efecto
       master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(0.04, t, 0.05); master.gain.setTargetAtTime(BASE(), t + 1.4, 0.4);
       if (kind === 'turn') return chime(t);
+      if (kind === 'pop') { master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(BASE(), t, 0.05); return popSnd(t); }
       hit(t);
       if (kind === 'condor' || kind === 'aguila') screech(t + 0.05); else growl(t + 0.05);
     } catch (_) {}

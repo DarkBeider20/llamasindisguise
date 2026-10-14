@@ -209,7 +209,7 @@ function renderLobby() {
       <p class="linkline"><span id="lnk">${esc(shareLink())}</span></p>
       <p class="label" style="margin-top:18px">Jugadores · ${ROOM.seats.length}/${ROOM.max}</p>
       <ul class="seats">${slots}</ul></div>
-    <div class="panel lobby-side"><h3>${isHost ? 'Tú eres el anfitrión' : 'Esperando al anfitrión'}</h3>
+    <div class="panel lobby-side"><h3>${isHost ? 'Tú eres el anfitrión' : 'Esperando al anfitrión'} <button class="btn small embtn" data-a="emotes" aria-label="Emotes" title="Emotes">Emotes</button></h3>
       <div class="goal">${ROOM.seats.length} jugadores · meta ${ROOM.target} rebaños<span class="pips">${'<b class="on"></b>'.repeat(Math.max(0, ROOM.target))}</span></div>
       ${isHost ? `<button class="btn wide" data-a="addbot" ${ROOM.seats.length >= ROOM.max ? 'disabled' : ''}>Agregar bot</button>
       <label class="check"><input type="checkbox" id="short" ${ROOM.opts.short ? 'checked' : ''}> Partida corta (un rebaño menos)</label>
@@ -227,13 +227,33 @@ function render() {
   // Conserva lo que el jugador estaba desplazando (la tira de rivales vive fuera del tablero y nunca se recrea).
   const keep = {};
   [['.hand', 'scrollLeft'], ['.myf', 'scrollLeft'], ['.me', 'scrollTop'], ['.log', 'scrollTop']].forEach(([q, k]) => { const el = $(q); if (el) keep[q + k] = el[k]; });
-  renderGame();
+  renderGame(); fitHand();
   [['.hand', 'scrollLeft'], ['.myf', 'scrollLeft'], ['.me', 'scrollTop'], ['.log', 'scrollTop']].forEach(([q, k]) => { const el = $(q); if (el && keep[q + k] != null) el[k] = keep[q + k]; });
   const dock = $('.me'); document.documentElement.style.setProperty('--dock', dock ? dock.offsetHeight + 'px' : '0px');
   if (!pc) { if (peekEl && !peekEl.isConnected) hidePeek(); return; }
   const el = [...document.querySelectorAll(`.card[data-cid="${pc}"]`)].find(x => !x.closest('#banner'));
   el ? showPeek(el) : hidePeek();
 }
+// Ajusta el solape de la mano para que entre en el ancho disponible. Si aun así no cabe
+// (cada carta mostraría menos de una franja tocable), la mano se desplaza de lado.
+function fitHand() {
+  const h = $('.hand'); if (!h) return;
+  const cs = [...h.querySelectorAll('.card[data-h]')], n = cs.length; if (!n) return;
+  const mob = matchMedia('(max-width:640px)').matches, cw = cs[0].offsetWidth || 80, st = getComputedStyle(h);
+  const W = h.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight) - 10;
+  const gap = mob ? [0, 0, 10] : [0, 6, 26];  // extra entre tipos distintos / entre alpacas y acciones
+  const def = mob ? -10 : n > 9 ? -30 : n > 6 ? -22 : -12;
+  const minVis = mob ? 34 : Math.max(30, cw * 0.34);
+  const extra = k => cs.reduce((a, c, i) => a + (i ? gap[+c.dataset.b || 0] * k : 0), 0);
+  let k = 1, ov = def;
+  if (n > 1) {
+    const fit = k2 => (W - cw - extra(k2)) / (n - 1) - cw;
+    if (fit(1) < def) { k = 0.4; ov = Math.max(-(cw - minVis), Math.min(def, fit(k))); }
+  }
+  h.classList.toggle('tight', ov < def);
+  cs.forEach((c, i) => c.style.setProperty('--ov', i ? `${Math.round(ov + gap[+c.dataset.b || 0] * k)}px` : '0px'));
+}
+let fitT = 0; addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitHand, 80); });
 function cardBlurb(c) {
   if (c.kind === 'action') {
     if (c.type === 'nice') return '<b>¡Buen intento!</b> Se usa sola: te la ofreceremos cuando alguien juegue una acción en tu contra.';
@@ -268,7 +288,7 @@ function renderGame() {
   renderRivals(stripH);
   const top = V.discard[V.discard.length - 1];
   const s = selCards(), ops = [], mine = canAct();
-  let hint = '';
+  let hint = '', endH = '';
   if (mine) {
     const allSame = s.length === 2 && s[0].kind === s[1].kind && s[0].type === s[1].type;
     if (s.length === 1 && playable(s[0])) ops.push(`<button class="btn primary" data-op="play">Jugar ${ACT[s[0].type].n}</button>`);
@@ -277,23 +297,24 @@ function renderGame() {
     if (allSame && V.field.length) ops.push(`<button class="btn" data-op="buy">Comprar del Campo (pagas estas 2)</button>`);
     if (s.length === 2 && p.flocks.some(f => f.exposed)) ops.push(`<button class="btn danger" data-op="pay">Pagar 2 para quitar Desenmascarar</button>`);
     if (s.length === 5 && !hasFlockMine('wild') && s.every(c => c.kind === 'sheep' && !isGold(c)) && new Set(s.map(c => c.type)).size === 5) ops.push(`<button class="btn" data-op="wild">Formar rebaño comodín</button>`);
-    ops.push(`<span class="ttimer ${Date.now() < bonusUntil ? 'bonus' : ''}" id="ttimer" data-bonus="+${bonusSecs} s">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
+    endH = `<div class="bar-end"><span class="ttimer ${Date.now() < bonusUntil ? 'bonus' : ''}" id="ttimer" data-bonus="+${bonusSecs} s">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button></div>`;
     if (!s.length) hint = isCoarse()
       ? '<b>Tu turno.</b> Toca cartas para elegir. <b>Mantén presionada</b> una para verla en grande y, sin soltar, arrástrala al Campo o a la mesa.' + (V.traded ? ' Ya cambiaste con el Campo.' : '')
       : '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
     else if (s.length === 1) hint = cardBlurb(s[0]);
     if (p.flocks.some(f => f.exposed)) hint += ' <b>Tienes un rebaño desenmascarado:</b> elige 2 cartas cualesquiera para pagar y protegerlo.';
   } else if (!V.over) hint = pending || (V.busy && V.waiting === V.you) ? 'Resolviendo…' : `Turno de <b>${esc(waitingName)}</b>. Espera tu turno.`;
-  const H = sortHand(V.hand), m = (H.length - 1) / 2, ov = H.length > 9 ? -30 : H.length > 6 ? -22 : -12;
-  const handH = H.map((c, i) => { const f = fresh(c); return cardHTML(c, { cls: (sel.has(c.id) ? 'sel ' : '') + f.cls + (canDragCard(c) ? ' dg' : ''), style: `${f.style}--r:${((i - m) * 2.2).toFixed(1)}deg;--y:${(Math.abs(i - m) * 1.6).toFixed(1)}px;--ov:${!i ? 0 : (H[i - 1].kind !== c.kind ? 14 : H[i - 1].type !== c.type ? ov + 6 : ov)}px;`, attrs: `data-h="${c.id}" aria-pressed="${sel.has(c.id)}"` }); }).join('');
+  // Abanico: el giro total se mantiene acotado aunque haya muchas cartas; fitHand() ajusta el solape al ancho.
+  const H = sortHand(V.hand), m = (H.length - 1) / 2, rStep = Math.min(2.2, 26 / Math.max(H.length, 1)), yStep = Math.min(1.6, 16 / Math.max(H.length, 1));
+  const handH = H.map((c, i) => { const f = fresh(c); const b = !i ? 0 : H[i - 1].kind !== c.kind ? 2 : H[i - 1].type !== c.type ? 1 : 0; return cardHTML(c, { cls: (sel.has(c.id) ? 'sel ' : '') + f.cls + (canDragCard(c) ? ' dg' : ''), style: `${f.style}--r:${((i - m) * rStep).toFixed(1)}deg;--y:${(Math.abs(i - m) * yStep).toFixed(1)}px;`, attrs: `data-h="${c.id}" data-b="${b}" aria-pressed="${sel.has(c.id)}"` }); }).join('');
   const myTurnNow = V.turn === V.you && !V.over;
   $('#board').innerHTML = `<div class="game"><div class="zone">
     <section class="table" aria-label="Mesa"><p class="label tbl-meta mob-only">Sala ${ROOM.code} · meta ${V.target} rebaños</p><div><p class="label">El Campo</p><div class="field">${V.field.map(c => { const f = fresh(c); return cardHTML(c, { cls: f.cls, style: f.style, attrs: 'tabindex="-1"' }); }).join('') || '<div class="card ghost"></div>'}</div></div>
       <div><p class="label">Pilas</p><div class="pileset"><div class="pile"><div class="deckstack"><div class="card back"></div></div>Mazo · ${V.deck}</div>
       <div class="pile">${top ? cardHTML(top, { attrs: 'data-a="discard" title="Ver descarte"' }) : '<div class="card ghost"></div>'}Descarte · ${V.discard.length}</div></div></div></section>
-    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}<div class="flocks myf">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
+    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}<button class="btn small embtn" data-a="emotes" aria-label="Emotes" title="Emotes"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.6" cy="10" r="1.4" fill="currentColor"/><circle cx="15.4" cy="10" r="1.4" fill="currentColor"/><path d="M7.8 14.2c1.1 1.6 2.5 2.4 4.2 2.4s3.1-.8 4.2-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><div class="flocks myf">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
       <div class="hand">${handH || '<span class="empty">Mano vacía</span>'}</div>
-      <div class="bar">${hint ? `<p class="hint">${hint}</p>` : ''}${ops.join('')}</div></section>
+      <div class="bar">${hint ? `<p class="hint" title="${esc(hint.replace(/<[^>]+>/g, ''))}">${hint}</p>` : ''}${ops.length ? `<div class="bar-ops">${ops.join('')}</div>` : ''}${endH}</div></section>
   </div></div>`;
   $('#logList').innerHTML = V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('');
   showSide(true);
@@ -640,6 +661,56 @@ $('#side').addEventListener('click', e => {
   const r = e.target.closest('[data-react]'); if (r) return sendChat(r.dataset.react, true);
 });
 setTab('log');
+
+/* ---------------- emotes ---------------- */
+// Arte provisional: recortes de las cartas. Para usar arte propio, cambia `img` por 'img/emote-<id>.webp' y quita `pos`.
+const EMOTES = [
+  { id: 'risa', label: 'JAJA', img: 'img/lucha.webp', pos: '50% 22%' },
+  { id: 'gg', label: 'GG', img: 'img/rock.webp', pos: '50% 22%' },
+  { id: 'mald', label: '%$#!', img: 'img/pirata.webp', pos: '50% 22%', hot: true },
+  { id: 'llanto', label: 'BUAA', img: 'img/a-gimme.webp', pos: '84% 22%' },
+  { id: 'zzz', label: 'ZZZ', img: 'img/ninja.webp', pos: '50% 22%' },
+  { id: 'pensando', label: '¿?', img: 'img/detective.webp', pos: '50% 22%' },
+  { id: 'sudor', label: 'GLUP', img: 'img/astro.webp', pos: '50% 26%' },
+  { id: 'aplauso', label: '¡BRAVO!', img: 'img/chef.webp', pos: '50% 22%' },
+  { id: 'apura', label: '¡APURA!', img: 'img/bombera.webp', pos: '50% 22%', hot: true },
+];
+const EM = Object.fromEntries(EMOTES.map(e => [e.id, e]));
+const emoteImg = e => `<span class="em-img ${e.pos ? 'crop' : ''}"><img src="${e.img}" alt="" draggable="false" style="${e.pos ? `object-position:${e.pos};transform-origin:${e.pos}` : ''}"></span>`;
+function toggleEmotes(anchor) {
+  const pop = $('#emotePop');
+  if (!pop.hidden) { pop.hidden = true; return; }
+  pop.innerHTML = EMOTES.map(e => `<button type="button" class="em-opt ${e.hot ? 'hot' : ''}" data-emote="${e.id}" aria-label="${e.label}">${emoteImg(e)}<b>${esc(e.label)}</b></button>`).join('');
+  pop.hidden = false;
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  pop.style.top = Math.max(8, r.top - h - 10) + 'px';
+}
+async function sendEmote(id) {
+  $('#emotePop').hidden = true;
+  const r = await emit('emote', { id }); if (r.error) toast(r.error, 'atk');
+}
+function showEmote(seat, id) {
+  const e = EM[id]; if (!e) return;
+  const target = (V && seat === V.you) ? $('.me-head .av') : (document.querySelector(`#rivals .rv[data-rival="${seat}"]`) || (ROOM && ROOM.phase === 'lobby' ? document.querySelectorAll('.seats .seat')[seat] : null));
+  const b = document.createElement('div'); b.className = 'em-bubble' + (e.hot ? ' hot' : '');
+  b.innerHTML = `${emoteImg(e)}<b>${esc(e.label)}</b>`;
+  document.body.appendChild(b);
+  let x = innerWidth / 2, y = 90;
+  if (target) { const r = target.getBoundingClientRect(); x = r.left + Math.min(r.width, 60) / 2 + 10; y = r.top; }
+  const w = b.offsetWidth, h = b.offsetHeight;
+  b.style.left = Math.max(6, Math.min(innerWidth - w - 6, x - w / 2)) + 'px';
+  b.style.top = Math.max(6, y - h + 8) + 'px';
+  if (target && target.closest('#rivals') && (target.getBoundingClientRect().right < 0 || target.getBoundingClientRect().left > innerWidth)) b.style.left = (target.getBoundingClientRect().left < 0 ? 6 : innerWidth - w - 6) + 'px';
+  window.RebanoMusic && window.RebanoMusic.sfx('pop');
+  setTimeout(() => { b.classList.add('out'); setTimeout(() => b.remove(), 400); }, 2600);
+}
+socket.on('emote', ({ seat, id }) => showEmote(seat, id));
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-emote]'); if (o) return sendEmote(o.dataset.emote);
+  const t = e.target.closest('[data-a="emotes"]'); if (t) { e.stopPropagation(); return toggleEmotes(t); }
+  const pop = $('#emotePop'); if (pop && !pop.hidden && !e.target.closest('#emotePop')) pop.hidden = true;
+});
 
 /* ---------------- reglas ---------------- */
 const RULES = `<div class="rules">

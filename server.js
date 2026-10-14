@@ -215,6 +215,19 @@ io.on('connection', socket => {
   });
   // Chat de la sala: se guarda solo en memoria (últimos 50 mensajes).
   let lastChat = 0;
+  // Emotes: burbujas sobre el avatar, no se guardan. Máximo uno cada 2 segundos por jugador.
+  const EMOTES = ['risa', 'gg', 'mald', 'llanto', 'zzz', 'pensando', 'sudor', 'aplauso', 'apura'];
+  let lastEmote = 0;
+  socket.on('emote', ({ id } = {}, cb) => {
+    if (!room) return fail(cb, 'No estás en una sala.');
+    const i = seatOf(room, token); if (i < 0) return fail(cb, 'No estás en esta sala.');
+    if (!EMOTES.includes(id)) return fail(cb, 'Emote desconocido.');
+    const now = Date.now(); if (now - lastEmote < 2000) return fail(cb, 'Espera un momento.');
+    lastEmote = now;
+    io.to(room.code).emit('emote', { seat: i, id });
+    cb && cb({ ok: true });
+  });
+
   socket.on('chat', ({ text, react } = {}, cb) => {
     if (!room) return fail(cb, 'No estás en una sala.');
     const i = seatOf(room, token); if (i < 0) return fail(cb, 'No estás en esta sala.');
