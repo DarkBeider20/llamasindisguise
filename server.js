@@ -8,7 +8,13 @@ const { BOT_NAMES, MAX_SEATS, targetFor } = require('./src/data');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+// HTML y JS siempre se revalidan (así cada deploy se ve al instante); las imágenes se guardan 7 días.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, file) => {
+    if (/\.(html|js|css)$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
+    else res.setHeader('Cache-Control', 'public, max-age=604800');
+  },
+}));
 app.get('/health', (_req, res) => res.send('ok'));
 const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 20000, pingTimeout: 25000 });

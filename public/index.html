@@ -507,6 +507,16 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   body.in-game .rv-f{min-height:22px} body.in-game .rv-f i{width:16px;height:22px}
   body.in-game .table{padding:10px 20px}
 }
+
+/* detalle de carta en el celular */
+#tsheet{position:fixed;inset:0;z-index:85;background:rgba(12,16,10,.55);display:flex;align-items:flex-end;justify-content:center;animation:pk .15s ease-out}
+.ts-in{width:100%;max-width:520px;background:var(--panel);color:var(--ink);border-radius:22px 22px 0 0;border-top:2px solid var(--ink);padding:16px max(16px, env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);gap:14px;align-items:start;animation:tsup .22s cubic-bezier(.2,1.2,.4,1)}
+@keyframes tsup{from{transform:translateY(40px);opacity:.4}}
+.ts-in .pk-card{width:100%;max-width:none}
+.ts-in .pk-info h4{font-size:24px}
+.ts-in .pk-info p{font-size:14.5px}
+.ts-in .ts-x{grid-column:1/-1;margin:0;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:360px){.ts-in{grid-template-columns:1fr}.ts-in .pk-card{width:60%;justify-self:center}}
 </style>
 </head>
 <body>
@@ -522,6 +532,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
 <div id="banner" hidden></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="peek" hidden aria-hidden="true"></div>
+<div id="tsheet" hidden></div>
 <div id="net" hidden>Reconectando con el servidor…</div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="app.js"></script>

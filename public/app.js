@@ -216,6 +216,15 @@ function render() {
   const el = [...document.querySelectorAll(`.card[data-cid="${pc}"]`)].find(x => !x.closest('#banner'));
   el ? showPeek(el) : hidePeek();
 }
+function cardBlurb(c) {
+  if (c.kind === 'action') {
+    if (c.type === 'nice') return '<b>¡Buen intento!</b> Se usa sola: te la ofreceremos cuando alguien juegue una acción en tu contra.';
+    return `<b>${ACT[c.type].n}:</b> ${esc(ACT[c.type].d)}`;
+  }
+  if (isGold(c)) return `<b>Alpaca Dorada:</b> junta las 3 y ganas al instante. Tienes ${countMine('dorada')} de 3.`;
+  const k = countMine(c.type), has = hasFlockMine(c.type);
+  return `<b>Alpaca ${SH[c.type].n}:</b> ` + (has ? 'ya tienes este rebaño; sirve para pagar, comprar o cambiar.' : `tienes ${k}, te ${3 - k === 1 ? 'falta 1' : 'faltan ' + Math.max(0, 3 - k)} para el rebaño.`) + (canTrade() ? ' Puedes cambiarla con el Campo.' : '');
+}
 function timeLeft() { return Math.max(0, Math.ceil((V.deadline + clockSkew - Date.now()) / 1000)); }
 function renderGame() {
   document.body.classList.add('in-game');
@@ -240,9 +249,9 @@ function renderGame() {
     if (s.length === 5 && !hasFlockMine('wild') && s.every(c => c.kind === 'sheep' && !isGold(c)) && new Set(s.map(c => c.type)).size === 5) ops.push(`<button class="btn" data-op="wild">Formar rebaño comodín</button>`);
     ops.push(`<span class="ttimer" id="ttimer">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
     if (!s.length) hint = isCoarse()
-      ? '<b>Tu turno.</b> Toca cartas para elegir, o <b>mantén presionada</b> una y arrástrala al Campo o a la mesa.' + (V.traded ? ' Ya cambiaste con el Campo.' : '')
+      ? '<b>Tu turno.</b> Toca cartas para elegir. <b>Mantén presionada</b> una para verla en grande y, sin soltar, arrástrala al Campo o a la mesa.' + (V.traded ? ' Ya cambiaste con el Campo.' : '')
       : '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
-    else if (s.length === 1 && s[0].type === 'nice') hint = '¡Buen intento! se usa sola: te la ofreceremos cuando alguien juegue una acción en tu contra.';
+    else if (s.length === 1) hint = cardBlurb(s[0]);
     if (p.flocks.some(f => f.exposed)) hint += ' <b>Tienes un rebaño desenmascarado:</b> elige 2 cartas cualesquiera para pagar y protegerlo.';
   } else if (!V.over) hint = pending || (V.busy && V.waiting === V.you) ? 'Resolviendo…' : `Turno de <b>${esc(waitingName)}</b>. Espera tu turno.`;
   const H = sortHand(V.hand), m = (H.length - 1) / 2, ov = H.length > 9 ? -30 : H.length > 6 ? -22 : -12;
@@ -336,7 +345,7 @@ function answer(id, value) {
 function nextPrompt() {
   if (activePrompt || !promptQueue.length) return;
   const pr = activePrompt = promptQueue.shift();
-  closeModal(true); hidePeek();
+  closeModal(true); hidePeek(); hideSheet();
   const bar = `<div class="pbar"><i style="animation-duration:${pr.ms}ms"></i></div>`;
   if (pr.type === 'nice') {
     openModal(`${bar}<h3>${esc(pr.title)}</h3><ol class="ntchain">${pr.rows.map((r, i) => `<li class="${i === 0 ? '' : (r.includes('cancelada') ? 'no' : 'yes')}">${esc(r)}</li>`).join('')}</ol><p>Tienes ${pr.left} ¡Buen intento! en la mano.</p>
@@ -440,6 +449,13 @@ function showPeek(el) {
   pk.style.left = x + 'px'; pk.style.top = y + 'px';
 }
 function hidePeek() { const pk = $('#peek'); if (pk) pk.hidden = true; peekEl = null; }
+// En el celular: la carta en grande, como hoja desde abajo. Se cierra con un toque.
+function showSheet(kind, type) {
+  const t = $('#tsheet'); if (!t || activePrompt) return;
+  t.innerHTML = `<div class="ts-in" role="dialog" aria-label="Detalle de la carta">${peekHTML(kind, type)}<p class="ts-x">Toca en cualquier parte para cerrar</p></div>`;
+  t.hidden = false;
+}
+function hideSheet() { const t = $('#tsheet'); if (t) t.hidden = true; }
 if (canHover) {
   document.addEventListener('mouseover', e => { const el = e.target.closest('.card[data-ck]'); if (!el || el.closest('#banner')) return; if (el !== peekEl) showPeek(el); });
   document.addEventListener('mouseout', e => { const el = e.target.closest('.card[data-ck]'); if (el && (!e.relatedTarget || !el.contains(e.relatedTarget))) hidePeek(); });
@@ -476,12 +492,19 @@ function moveDrag(x, y) {
 }
 document.addEventListener('pointerdown', e => {
   const el = e.target.closest('.hand .card[data-h]'); if (!el || e.button > 0) return;
-  const hc0 = myHand().find(c => c.id === +el.dataset.h); if (!canDragCard(hc0)) return;
+  const hc0 = myHand().find(c => c.id === +el.dataset.h); if (!hc0) return;
   const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
-  drag = { el, card: hc0, id: hc0.id, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, on: false, ghost: null, hot: null, pid: e.pointerId, touch };
+  const can = canDragCard(hc0);
+  if (!touch && !can) return;
+  drag = { el, card: hc0, id: hc0.id, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, on: false, armed: false, can, ghost: null, hot: null, pid: e.pointerId, touch };
   if (touch) {
-    const d = drag; el.classList.add('lp');
-    d.lp = setTimeout(() => { if (drag === d && !d.on) startDrag(d.lx, d.ly); }, 300);
+    // Mantener presionada: se abre la carta en grande. Si luego mueves el dedo, la arrastras.
+    const d = drag;
+    d.lp = setTimeout(() => {
+      if (drag !== d || d.on) return;
+      d.armed = true; el.classList.add('lp'); showSheet(hc0.kind, hc0.type);
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+    }, 300);
   }
 });
 document.addEventListener('pointermove', e => {
@@ -489,21 +512,26 @@ document.addEventListener('pointermove', e => {
   drag.lx = e.clientX; drag.ly = e.clientY;
   if (!drag.on) {
     const moved = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
-    if (drag.touch) { if (moved > 8) { clearTimeout(drag.lp); drag.el.classList.remove('lp'); drag = null; } return; }
-    if (moved < 7) return;
-    startDrag(e.clientX, e.clientY);
+    if (drag.touch) {
+      if (!drag.armed) { if (moved > 8) { clearTimeout(drag.lp); drag = null; } return; }
+      if (!drag.can || moved < 12) return;
+      hideSheet(); startDrag(e.clientX, e.clientY);
+    }
+    else if (moved < 7) return;
+    else startDrag(e.clientX, e.clientY);
   }
+  if (!drag.on) return;
   e.preventDefault();
   moveDrag(e.clientX, e.clientY);
 }, { passive: false });
 // Mientras arrastras con el dedo, la página no debe desplazarse.
-document.addEventListener('touchmove', e => { if (drag && drag.on) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', e => { if (drag && (drag.on || drag.armed)) e.preventDefault(); }, { passive: false });
 document.addEventListener('contextmenu', e => { if (e.target.closest('.hand .card')) e.preventDefault(); });
 function endDrag(e, cancel) {
   if (!drag || (e && e.pointerId !== drag.pid)) return;
   const d = drag; drag = null; peekBlock = false;
   clearTimeout(d.lp); d.el.classList.remove('lp');
-  if (!d.on) return;
+  if (!d.on) { if (d.armed) { swallowClick = true; setTimeout(() => { swallowClick = false; }, 0); } return; }
   swallowClick = true; setTimeout(() => { swallowClick = false; }, 0);
   d.ghost.remove(); d.el.classList.remove('dragging'); d.hot && d.hot.classList.remove('drop-hot');
   const tb = $('.table'); tb && tb.classList.remove('dropping', 'can-play', 'play-hot');
@@ -564,6 +592,15 @@ document.addEventListener('click', async e => {
 document.addEventListener('change', async e => {
   if (e.target.id === 'short') { const r = await emit('opts', { short: e.target.checked }); if (r.error) toast(r.error, 'atk'); }
 });
+document.addEventListener('click', e => {
+  const t = $('#tsheet');
+  if (t && !t.hidden && t.contains(e.target)) { e.stopImmediatePropagation(); hideSheet(); return; }
+  // En pantallas táctiles, tocar una carta que no es de tu mano (Campo, descarte abierto) muestra su detalle.
+  if (!isCoarse()) return;
+  const c = e.target.closest('.card[data-ck]');
+  if (!c || c.closest('.hand') || c.closest('[data-p]') || c.closest('#banner') || c.matches('[data-a]') || c.closest('.swap')) return;
+  const [kind, type] = c.dataset.ck.split(':'); e.stopImmediatePropagation(); showSheet(kind, type);
+}, true);
 document.addEventListener('input', e => { if (e.target.id === 'code') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
 $('#logo').innerHTML = '<img src="img/back.webp" alt="">';
