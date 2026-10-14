@@ -398,6 +398,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .rv-f{display:flex;align-items:center;gap:3px;margin-top:3px;font-size:10px;color:var(--muted)}
   .rv-f i{width:10px;height:13px;border-radius:3px;background:var(--c);display:block}
   .rv-f i.x{outline:2px dashed var(--danger);outline-offset:1px}
+  .rv-f i img{display:none}
+  .me-head .myf{flex-basis:100%;order:5;margin-top:2px}
   .rv-f b{margin-left:4px;font-family:var(--f-mono);font-weight:500}
   .rv-f em{font-style:italic}
   .rv-t{position:absolute;top:-8px;right:8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:#2a1d00;padding:2px 6px;border-radius:999px}
@@ -432,6 +434,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .hand .card:hover{transform:none}
   .hand .card.sel{transform:translateY(-12px)}
   .hand .card.dg{touch-action:pan-x;cursor:pointer}
+  .hand .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .hand .card.lp{transition:transform .3s ease,box-shadow .3s ease;transform:translateY(-8px) scale(1.04);box-shadow:0 0 0 3px var(--gold),0 10px 18px rgba(0,0,0,.25)}
   .hand .card .nm{font-size:10px;line-height:1.05;overflow-wrap:anywhere;padding:4px 2px}
   .hand .card .corner{font-size:9px}
   .bar{position:static;margin:6px 0 0;padding:8px 0 0;gap:6px;background:none;border-radius:0}
@@ -445,6 +449,63 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .picker{--cw:76px;--ch:104px;gap:6px;padding:10px}
   #toasts{top:calc(8px + env(safe-area-inset-top,0px))}
   #banner .card{--cw:130px;--ch:176px}
+}
+
+/* ---------- PC: todo en una pantalla ---------- */
+@media (min-width:641px){
+  body.in-game{overflow:hidden;--cw:clamp(74px, calc(15vh - 14px), 146px);--ch:calc(var(--cw) * 1.36)}
+  body.in-game #app{height:100vh;height:100dvh;display:flex;flex-direction:column;padding-block:8px 10px;max-width:1520px}
+  body.in-game .top{padding-bottom:6px;flex:none}
+  body.in-game .logo{width:36px;height:36px;border-radius:11px}
+  body.in-game .brand{font-size:21px}
+  body.in-game .brand small{display:none}
+  body.in-game #board{flex:1;min-height:0}
+  body.in-game .game{height:100%;grid-template-columns:minmax(0,1fr) 270px;gap:12px}
+  body.in-game .zone{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px}
+  body.in-game .log{max-height:none;height:100%;position:static;overflow:auto}
+  /* rivales en una fila */
+  .rivals-strip{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 4px;scrollbar-width:thin}
+  .rv{flex:1 1 0;min-width:128px;max-width:320px;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:14px;border:2px solid var(--line);background:var(--panel);text-align:left;position:relative;transition:border-color .2s,box-shadow .2s}
+  .rv:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+  .rv.turn{border-color:var(--gold);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 30%,transparent)}
+  .rv.off{opacity:.55}
+  .rv .av{width:36px;height:36px;font-size:16px;flex:none}
+  .rv-b{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+  .rv-n{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rv-s{font-size:12px;color:var(--muted)}
+  .rv-f{display:flex;align-items:center;gap:3px;margin-top:4px;font-size:11px;color:var(--muted);min-height:27px}
+  .rv-f i{width:20px;height:27px;border-radius:5px;overflow:hidden;border:2px solid var(--c);background:var(--paper);flex:none}
+  .rv-f i img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block}
+  .rv-f i.x{border-style:dashed;border-color:var(--danger)}
+  .rv-f b{margin-left:5px;font-family:var(--f-mono);font-weight:500}
+  .rv-f em{font-style:italic}
+  .rv-t{position:absolute;top:-9px;right:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:#2a1d00;padding:2px 7px;border-radius:999px}
+  /* mesa al centro, ocupa lo que sobra */
+  body.in-game .table{min-height:0;align-items:center;align-content:center;justify-content:center;gap:16px 40px;padding:16px 24px;overflow:hidden}
+  body.in-game .table .tbl-meta{display:none}
+  /* tu zona compacta */
+  body.in-game .me{padding:10px 14px 10px}
+  body.in-game .me-head{flex-wrap:nowrap;gap:10px;min-height:40px}
+  body.in-game .me-head h3{font-size:18px;white-space:nowrap}
+  body.in-game .me-head .myf{margin:0;flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;min-height:0;scrollbar-width:none}
+  body.in-game .me-head .myf .empty{white-space:nowrap}
+  body.in-game .me-head .myf .flock{flex:none;padding:3px 9px 3px 4px}
+  body.in-game .me-head .myf .flock .stk i{width:26px;height:34px;margin-left:-15px}
+  body.in-game .me-head .myf .flock .stk i:first-child{margin-left:0}
+  body.in-game .me-head .pips{margin-left:0;flex:none}
+  body.in-game .hand{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;margin-top:0;padding:18px 8px 4px 22px;min-height:calc(var(--ch) + 24px);scrollbar-width:thin}
+  body.in-game .hand .card{flex:none}
+  body.in-game .hand .card:hover{transform:rotate(0deg) translateY(-12px)}
+  body.in-game .hand .card.sel{transform:rotate(0deg) translateY(-16px)}
+  body.in-game .bar{margin-top:6px;padding-top:8px;flex-wrap:nowrap;gap:8px}
+  body.in-game .bar .btn{white-space:nowrap;flex:none}
+  body.in-game .hint{flex:1 1 auto;min-width:0;font-size:12.5px;line-height:1.35;margin:0 6px 0 0}
+  body.in-game .ttimer{margin-left:0;white-space:nowrap;flex:none}
+}
+@media (min-width:641px) and (max-height:700px){
+  body.in-game .rv{padding:5px 10px 5px 6px}
+  body.in-game .rv-f{min-height:22px} body.in-game .rv-f i{width:16px;height:22px}
+  body.in-game .table{padding:10px 20px}
 }
 </style>
 </head>

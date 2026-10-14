@@ -145,6 +145,7 @@ const others = () => V.players.map((p, i) => ({ p, i })).filter(x => x.i !== V.y
 
 /* ---------------- pantallas: inicio y sala ---------------- */
 function renderHome(prefill) {
+  document.body.classList.remove('in-game');
   ROOM = null; V = null;
   $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button>`;
   const sample = [{ kind: 'sheep', type: 'lucha' }, { kind: 'action', type: 'expose' }, { kind: 'sheep', type: 'dorada' }, { kind: 'attack', type: 'puma' }, { kind: 'sheep', type: 'rock' }];
@@ -175,6 +176,7 @@ async function doJoin() {
 }
 function shareLink() { return `${location.origin}${location.pathname}?sala=${ROOM.code}`; }
 function renderLobby() {
+  document.body.classList.remove('in-game');
   if (!ROOM) return renderHome();
   const isHost = ROOM.you === ROOM.host && ROOM.you >= 0;
   $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir de la sala</button>`;
@@ -216,20 +218,14 @@ function render() {
 }
 function timeLeft() { return Math.max(0, Math.ceil((V.deadline + clockSkew - Date.now()) / 1000)); }
 function renderGame() {
+  document.body.classList.add('in-game');
   const p = me(), cur = V.players[V.turn];
   const waitingName = V.waiting >= 0 ? V.players[V.waiting].name : cur.name;
   $('#stats').innerHTML = `<span class="pill">Sala ${ROOM.code}</span><span class="pill">Meta: ${V.target} rebaños</span><button class="btn small mob-only" data-a="log">Bitácora</button><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir</button>`;
-  const oppH = others().map(({ p: q, i }) => {
-    const on = V.turn === i && !V.over, k = Math.min(q.handCount, 9);
-    return `<div class="opp ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}"><div class="who">${avatar(q.name, i)}<span><span class="nm">${esc(q.name)}${q.bot ? ' <small class="botb">bot</small>' : ''}</span><br><span class="sub">${q.connected || q.bot ? `${q.handCount} carta${q.handCount === 1 ? '' : 's'}` : 'Desconectado'}</span></span>
-      ${on ? `<span class="turnflag" style="${bobDelay()}">Su turno</span>` : `<span class="backs">${Array.from({ length: k }, (_, j) => `<i style="--r:${(j - (k - 1) / 2) * 7}deg"></i>`).join('')}</span>`}</div>
-      <div class="flocks">${q.flocks.length ? q.flocks.map(flockHTML).join('') : '<span class="empty">Sin rebaños todavía</span>'}</div>
-      <div class="who" style="margin-top:8px">${pips(q)}</div></div>`;
-  }).join('');
   const stripH = others().map(({ p: q, i }) => {
     const on = V.turn === i && !V.over;
-    const dots = q.flocks.map(f => `<i class="${f.exposed ? 'x' : ''}" style="--c:${f.wild ? '#5d6550' : SH[f.type].c}"></i>`).join('');
-    return `<button class="rv ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}" data-rival="${i}" aria-label="Ver a ${esc(q.name)}">${avatar(q.name, i)}<span class="rv-b"><span class="rv-n">${esc(q.name)}</span><span class="rv-s">${q.connected || q.bot ? `${q.handCount} cartas` : 'Desconectado'}</span><span class="rv-f">${dots || '<em>sin rebaños</em>'}<b>${q.flocks.length}/${V.target}</b></span></span>${on ? '<span class="rv-t">turno</span>' : ''}</button>`;
+    const dots = q.flocks.map(f => { const t = f.wild ? ((f.cards && f.cards[0]) || 'astro') : f.type; return `<i class="${f.exposed ? 'x' : ''}" style="--c:${f.wild ? '#5d6550' : SH[f.type].c}" title="${fname(f)}${f.exposed ? ' (expuesto)' : ''}"><img src="img/${t}.webp" alt=""></i>`; }).join('');
+    return `<button class="rv ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}" data-rival="${i}" aria-label="Ver a ${esc(q.name)}">${avatar(q.name, i)}<span class="rv-b"><span class="rv-n">${esc(q.name)}</span><span class="rv-s">${q.connected || q.bot ? `${q.handCount} cartas` : 'Desconectado'}</span><span class="rv-f">${dots}<b>${q.flocks.length}/${V.target}</b></span></span>${on ? '<span class="rv-t">turno</span>' : ''}</button>`;
   }).join('');
   const top = V.discard[V.discard.length - 1];
   const s = selCards(), ops = [], mine = canAct();
@@ -244,7 +240,7 @@ function renderGame() {
     if (s.length === 5 && !hasFlockMine('wild') && s.every(c => c.kind === 'sheep' && !isGold(c)) && new Set(s.map(c => c.type)).size === 5) ops.push(`<button class="btn" data-op="wild">Formar rebaño comodín</button>`);
     ops.push(`<span class="ttimer" id="ttimer">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
     if (!s.length) hint = isCoarse()
-      ? '<b>Tu turno.</b> Toca 1 acción para jugarla, 1 carta para cambiarla' + (V.traded ? ' (ya cambiaste)' : '') + ', 2 iguales para comprar o 5 alpacas distintas para el comodín.'
+      ? '<b>Tu turno.</b> Toca cartas para elegir, o <b>mantén presionada</b> una y arrástrala al Campo o a la mesa.' + (V.traded ? ' Ya cambiaste con el Campo.' : '')
       : '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
     else if (s.length === 1 && s[0].type === 'nice') hint = '¡Buen intento! se usa sola: te la ofreceremos cuando alguien juegue una acción en tu contra.';
     if (p.flocks.some(f => f.exposed)) hint += ' <b>Tienes un rebaño desenmascarado:</b> elige 2 cartas cualesquiera para pagar y protegerlo.';
@@ -254,14 +250,12 @@ function renderGame() {
   const myTurnNow = V.turn === V.you && !V.over;
   $('#board').innerHTML = `<div class="game"><div class="zone">
     <div class="rivals-strip" aria-label="Rivales">${stripH}</div>
-    <div class="opps-wrap"><p class="label">Rivales</p><div class="opps">${oppH}</div></div>
     <section class="table" aria-label="Mesa"><p class="label tbl-meta mob-only">Sala ${ROOM.code} · meta ${V.target} rebaños</p><div><p class="label">El Campo</p><div class="field">${V.field.map(c => { const f = fresh(c); return cardHTML(c, { cls: f.cls, style: f.style, attrs: 'tabindex="-1"' }); }).join('') || '<div class="card ghost"></div>'}</div></div>
       <div><p class="label">Pilas</p><div class="pileset"><div class="pile"><div class="deckstack"><div class="card back"></div></div>Mazo · ${V.deck}</div>
       <div class="pile">${top ? cardHTML(top, { attrs: 'data-a="discard" title="Ver descarte"' }) : '<div class="card ghost"></div>'}Descarte · ${V.discard.length}</div></div></div></section>
-    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
-      <div class="flocks">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>
+    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}<div class="flocks myf">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
       <div class="hand">${handH || '<span class="empty">Mano vacía</span>'}</div>
-      <div class="bar">${ops.join('')}${hint ? `<p class="hint">${hint}</p>` : ''}</div></section>
+      <div class="bar">${hint ? `<p class="hint">${hint}</p>` : ''}${ops.join('')}</div></section>
   </div><aside class="log" aria-label="Bitácora"><p class="label">Bitácora</p><ol>${V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('')}</ol></aside></div>`;
 }
 setInterval(() => { const t = $('#ttimer'); if (t && V) { const s = timeLeft(); t.textContent = `${s} s`; t.classList.toggle('low', s <= 15); } }, 1000);
@@ -455,35 +449,60 @@ if (canHover) {
 
 /* ---------------- arrastrar cartas ---------------- */
 let drag = null, swallowClick = false;
+// Con mouse: arrastra al mover 7 px. Con el dedo: mantén presionada la carta ~0,3 s y luego arrastra
+// (si deslizas enseguida, la mano se desplaza como siempre).
+function startDrag(x, y) {
+  const d = drag; if (!d || d.on) return;
+  d.on = true; hidePeek(); peekBlock = true;
+  const r = d.el.getBoundingClientRect(), g = d.el.cloneNode(true);
+  g.classList.remove('sel', 'enter', 'lp'); g.classList.add('drag-ghost'); g.removeAttribute('data-ck');
+  g.style.cssText = `width:${r.width}px;height:${r.height}px;left:0;top:0`; d.dx = x - r.left; d.dy = y - r.top;
+  document.body.appendChild(g); d.ghost = g; d.el.classList.remove('lp'); d.el.classList.add('dragging');
+  const tb = $('.table'); if (tb) { if (canTrade()) tb.classList.add('dropping'); if (playable(d.card)) { tb.classList.add('can-play'); tb.dataset.play = `Suelta aquí para jugar ${ACT[d.card.type].n}`; } }
+  try { d.el.setPointerCapture(d.pid); } catch (_) {}
+  if (d.touch && navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }
+  moveDrag(x, y);
+}
+function moveDrag(x, y) {
+  const d = drag; if (!d || !d.on) return;
+  d.ghost.style.transform = `translate(${x - d.dx}px,${y - d.dy}px) rotate(-5deg) scale(1.06)`;
+  d.ghost.style.visibility = 'hidden';
+  const under = document.elementFromPoint(x, y);
+  d.ghost.style.visibility = '';
+  const hot = canTrade() ? under && under.closest('.field .card[data-cid]') : null;
+  const onTable = !hot && playable(d.card) && under && under.closest('.table');
+  if (hot !== d.hot) { d.hot && d.hot.classList.remove('drop-hot'); hot && hot.classList.add('drop-hot'); d.hot = hot; }
+  d.play = !!onTable; const tbl = $('.table'); tbl && tbl.classList.toggle('play-hot', d.play);
+}
 document.addEventListener('pointerdown', e => {
-  if (isCoarse()) return; // en el celular se juega tocando: así la mano se puede deslizar
   const el = e.target.closest('.hand .card[data-h]'); if (!el || e.button > 0) return;
   const hc0 = myHand().find(c => c.id === +el.dataset.h); if (!canDragCard(hc0)) return;
-  drag = { el, card: hc0, id: hc0.id, x: e.clientX, y: e.clientY, on: false, ghost: null, hot: null, pid: e.pointerId };
+  const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  drag = { el, card: hc0, id: hc0.id, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, on: false, ghost: null, hot: null, pid: e.pointerId, touch };
+  if (touch) {
+    const d = drag; el.classList.add('lp');
+    d.lp = setTimeout(() => { if (drag === d && !d.on) startDrag(d.lx, d.ly); }, 300);
+  }
 });
 document.addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.pid) return;
+  drag.lx = e.clientX; drag.ly = e.clientY;
   if (!drag.on) {
-    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 7) return;
-    drag.on = true; hidePeek(); peekBlock = true;
-    const r = drag.el.getBoundingClientRect(), g = drag.el.cloneNode(true);
-    g.classList.remove('sel', 'enter'); g.classList.add('drag-ghost'); g.removeAttribute('data-ck');
-    g.style.cssText = `width:${r.width}px;height:${r.height}px;left:0;top:0`; drag.dx = e.clientX - r.left; drag.dy = e.clientY - r.top;
-    document.body.appendChild(g); drag.ghost = g; drag.el.classList.add('dragging');
-    const tb = $('.table'); if (tb) { if (canTrade()) tb.classList.add('dropping'); if (playable(drag.card)) { tb.classList.add('can-play'); tb.dataset.play = `Suelta aquí para jugar ${ACT[drag.card.type].n}`; } }
-    try { drag.el.setPointerCapture(e.pointerId); } catch (_) {}
+    const moved = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
+    if (drag.touch) { if (moved > 8) { clearTimeout(drag.lp); drag.el.classList.remove('lp'); drag = null; } return; }
+    if (moved < 7) return;
+    startDrag(e.clientX, e.clientY);
   }
   e.preventDefault();
-  drag.ghost.style.transform = `translate(${e.clientX - drag.dx}px,${e.clientY - drag.dy}px) rotate(-5deg) scale(1.06)`;
-  const under = document.elementFromPoint(e.clientX, e.clientY);
-  const hot = canTrade() ? under && under.closest('.field .card[data-cid]') : null;
-  const onTable = !hot && playable(drag.card) && under && under.closest('.table');
-  if (hot !== drag.hot) { drag.hot && drag.hot.classList.remove('drop-hot'); hot && hot.classList.add('drop-hot'); drag.hot = hot; }
-  drag.play = !!onTable; const tbl = $('.table'); tbl && tbl.classList.toggle('play-hot', drag.play);
+  moveDrag(e.clientX, e.clientY);
 }, { passive: false });
+// Mientras arrastras con el dedo, la página no debe desplazarse.
+document.addEventListener('touchmove', e => { if (drag && drag.on) e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => { if (e.target.closest('.hand .card')) e.preventDefault(); });
 function endDrag(e, cancel) {
   if (!drag || (e && e.pointerId !== drag.pid)) return;
   const d = drag; drag = null; peekBlock = false;
+  clearTimeout(d.lp); d.el.classList.remove('lp');
   if (!d.on) return;
   swallowClick = true; setTimeout(() => { swallowClick = false; }, 0);
   d.ghost.remove(); d.el.classList.remove('dragging'); d.hot && d.hot.classList.remove('drop-hot');
