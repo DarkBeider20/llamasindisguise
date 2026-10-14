@@ -526,7 +526,10 @@ document.addEventListener('pointermove', e => {
 }, { passive: false });
 // Mientras arrastras con el dedo, la página no debe desplazarse.
 document.addEventListener('touchmove', e => { if (drag && (drag.on || drag.armed)) e.preventDefault(); }, { passive: false });
-document.addEventListener('contextmenu', e => { if (e.target.closest('.hand .card')) e.preventDefault(); });
+const noSelectZone = t => { const el = t && (t.nodeType === 1 ? t : t.parentElement); return el && el.closest('.card, .hand, .table, .rv, .me-head, .flock, #tsheet'); };
+document.addEventListener('contextmenu', e => { if (noSelectZone(e.target)) e.preventDefault(); });
+document.addEventListener('selectstart', e => { if (noSelectZone(e.target)) e.preventDefault(); });
+document.addEventListener('dragstart', e => { if (noSelectZone(e.target)) e.preventDefault(); });
 function endDrag(e, cancel) {
   if (!drag || (e && e.pointerId !== drag.pid)) return;
   const d = drag; drag = null; peekBlock = false;
