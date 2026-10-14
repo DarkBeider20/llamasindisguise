@@ -14,7 +14,7 @@ const app = express();
 // a bajar el app.js nuevo aunque tenga uno viejo guardado.
 const PUB = path.join(__dirname, 'public');
 const BUILD = crypto.createHash('sha1')
-  .update(fs.readFileSync(path.join(PUB, 'app.js'))).update(fs.readFileSync(path.join(PUB, 'index.html')))
+  .update(fs.readFileSync(path.join(PUB, 'app.js'))).update(fs.readFileSync(path.join(PUB, 'music.js'))).update(fs.readFileSync(path.join(PUB, 'index.html')))
   .digest('hex').slice(0, 8);
 const INDEX = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace(/__V__/g, BUILD);
 const sendIndex = (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.type('html').send(INDEX); };
@@ -115,6 +115,7 @@ io.on('connection', socket => {
     room = r; socket.join(r.code);
     const i = seatOf(r, token);
     r.seats[i].sid = socket.id;
+    socket.emit('chatHistory', r.chat || []);
     if (r.game && r.phase !== 'lobby') {
       r.game.setConnected(i, true);
       socket.emit('state', r.game.view(i));
@@ -140,7 +141,7 @@ io.on('connection', socket => {
   socket.on('create', ({ name } = {}, cb) => {
     if (!token) return fail(cb, 'Recarga la página.');
     leaveCurrent();
-    const r = { code: newCode(), host: token, seats: [{ token, name: cleanName(name), bot: false, sid: null }], opts: { short: false }, game: null, phase: 'lobby', prompts: new Map(), idleSince: 0 };
+    const r = { code: newCode(), host: token, seats: [{ token, name: cleanName(name), bot: false, sid: null }], opts: { short: false }, game: null, phase: 'lobby', prompts: new Map(), idleSince: 0, chat: [] };
     rooms.set(r.code, r);
     enter(r, cb);
   });
@@ -210,6 +211,22 @@ io.on('connection', socket => {
     try { const r = await room.game.intent(i, msg || {}); cb && cb(r); }
     catch (e) { console.error(e); fail(cb, 'Error del servidor.'); }
   });
+  // Chat de la sala: se guarda solo en memoria (últimos 50 mensajes).
+  let lastChat = 0;
+  socket.on('chat', ({ text, react } = {}, cb) => {
+    if (!room) return fail(cb, 'No estás en una sala.');
+    const i = seatOf(room, token); if (i < 0) return fail(cb, 'No estás en esta sala.');
+    const now = Date.now();
+    if (now - lastChat < 700) return fail(cb, 'Más despacio.');
+    const clean = String(text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 200);
+    if (!clean) return fail(cb, 'Mensaje vacío.');
+    lastChat = now;
+    const msg = { seat: i, name: room.seats[i].name, text: clean, react: !!react, ts: now };
+    room.chat = room.chat || []; room.chat.push(msg); if (room.chat.length > 50) room.chat.shift();
+    io.to(room.code).emit('chat', msg);
+    cb && cb({ ok: true });
+  });
+
   socket.on('answer', ({ id, value } = {}) => {
     if (!room) return;
     const pr = room.prompts.get(id); if (!pr) return;

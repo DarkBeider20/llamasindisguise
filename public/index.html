@@ -463,8 +463,10 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   body.in-game .logo{width:36px;height:36px;border-radius:11px}
   body.in-game .brand{font-size:21px}
   body.in-game .brand small{display:none}
-  body.in-game #board{flex:1;min-height:0}
-  body.in-game .game{height:100%;grid-template-columns:minmax(0,1fr) 270px;gap:12px}
+  body.in-game #main{flex:1;min-height:0}
+  body.in-game #board{height:100%;min-height:0;flex:1;min-width:0}
+  body.in-game .game{height:100%;grid-template-columns:minmax(0,1fr);gap:12px}
+  body.in-game #side{height:100%}
   body.in-game .zone{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
   body.in-game #rivals{flex:none;margin-bottom:10px}
   body.in-game .log{max-height:none;height:100%;position:static;overflow:auto}
@@ -527,6 +529,59 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
 .card,.card *,.hand,.table,.rv,.me-head,.flock,.pile,.picker,#tsheet,.ts-in{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .card img,.rv img,.flock img,.ts-in img,.pk-card img{-webkit-user-drag:none;-webkit-touch-callout:none}
 button{-webkit-tap-highlight-color:transparent}
+
+/* botón de música */
+.btn.music{display:inline-grid;place-items:center;width:36px;height:34px;padding:0;flex:none}
+.btn.music .slash{display:none}
+.btn.music.off{opacity:.6}
+.btn.music.off .slash{display:inline}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.top .stats{margin-left:auto}
+@media (max-width:640px){.btn.music{width:32px;height:30px}}
+
+/* ---------- bitácora + chat ---------- */
+#main{display:block}
+body.in-lobby .side-tab[data-tab="log"]{display:none}
+#side{display:flex;flex-direction:column;min-height:0;background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:10px 12px;gap:8px}
+.side-tabs{display:flex;gap:6px;align-items:center}
+.side-tab{border:none;background:transparent;font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-radius:999px;display:inline-flex;gap:6px;align-items:center}
+.side-tab[aria-selected="true"]{background:var(--bg);color:var(--ink)}
+.side-x{display:none;margin-left:auto}
+.badge{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;display:inline-grid;place-items:center;letter-spacing:0}
+#side[data-tab="log"] #chatBox,#side[data-tab="chat"] .side-log{display:none}
+.side-log{flex:1;min-height:0;overflow:auto}
+#chatBox{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+#chatList{list-style:none;margin:0;padding:0 2px;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;font-size:14px}
+#chatList li{line-height:1.35;overflow-wrap:anywhere}
+#chatList li b{color:var(--c)}
+#chatList li.me-msg{background:var(--bg);border-radius:10px;padding:4px 8px}
+#chatList li.react span{font-family:var(--f-display);font-size:17px}
+#chatList li.react.mald span{color:var(--danger);display:inline-block;animation:mald .35s linear 3}
+@keyframes mald{25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
+.chat-empty{color:var(--muted);font-style:italic;font-size:13px}
+.reacts{display:flex;gap:6px;flex-wrap:wrap}
+.reacts button{border:2px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 10px;font-weight:800;font-size:12px}
+.reacts button:hover{border-color:var(--accent)}
+.reacts button.mald{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+#chatForm{display:flex;gap:6px}
+#chatForm input{flex:1;min-width:0;font:inherit;font-size:15px;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+#chatForm input:focus{outline:none;border-color:var(--accent)}
+.chatbtn{position:relative}
+.chatbtn .badge{position:absolute;top:-7px;right:-7px}
+@media (min-width:641px){
+  body.in-game #main,body.in-lobby #main{display:flex;gap:12px}
+  body.in-game #side{width:290px;flex:none}
+  body.in-lobby #main{align-items:flex-start}
+  body.in-lobby #board{flex:1;min-width:0}
+  body.in-lobby #side{width:300px;flex:none;height:480px;margin-top:14px}
+  .chatbtn.mob-only{display:none!important}
+}
+@media (max-width:640px){
+  .desk-txt{display:none}
+  #side:not(.open){display:none!important}
+  #side.open{position:fixed;left:0;right:0;bottom:0;top:22vh;z-index:75;border-radius:20px 20px 0 0;border-width:2px 0 0;padding:12px max(14px, env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px, env(safe-area-inset-left,0px));box-shadow:0 -12px 30px rgba(0,0,0,.3)}
+  #side.open .side-x{display:inline-flex}
+}
 </style>
 </head>
 <body>
@@ -535,9 +590,25 @@ button{-webkit-tap-highlight-color:transparent}
     <span class="logo" aria-hidden="true" id="logo"></span>
     <h1 class="brand">Rebaño de Incógnito<small>Juego de cartas online · hasta 8 jugadores</small></h1>
     <div class="stats" id="stats"></div>
+    <button class="btn small music" id="musicBtn" aria-pressed="true" title="Silenciar música"><svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path class="note" d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/><path class="slash" d="M3 3l18 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="sr">Música</span></button>
   </header>
   <div id="rivals" class="rivals-strip" aria-label="Rivales" hidden></div>
+  <div id="main">
   <main id="board"><p style="padding:40px 0;color:var(--muted)">Conectando…</p></main>
+  <aside id="side" hidden aria-label="Bitácora y chat">
+    <div class="side-tabs" role="tablist">
+      <button class="side-tab" data-tab="log" role="tab">Bitácora</button>
+      <button class="side-tab" data-tab="chat" role="tab">Chat <b class="badge" id="chatBadge" hidden></b></button>
+      <button class="btn small side-x" data-a="chatclose" aria-label="Cerrar chat">Cerrar</button>
+    </div>
+    <ol id="logList" class="loglist side-log"></ol>
+    <div id="chatBox">
+      <ol id="chatList" aria-live="polite"><li class="chat-empty">Todavía no hay mensajes. Saluda o usa una reacción rápida.</li></ol>
+      <div class="reacts" id="reacts"></div>
+      <form id="chatForm" autocomplete="off"><input id="chatIn" maxlength="200" placeholder="Escribe un mensaje…" aria-label="Mensaje"><button class="btn small primary" type="submit">Enviar</button></form>
+    </div>
+  </aside>
+  </div>
 </div>
 <div id="modal" hidden></div>
 <div id="banner" hidden></div>
@@ -546,6 +617,7 @@ button{-webkit-tap-highlight-color:transparent}
 <div id="tsheet" hidden></div>
 <div id="net" hidden>Reconectando con el servidor…</div>
 <script src="/socket.io/socket.io.js"></script>
+<script src="music.js?v=__V__"></script>
 <script src="app.js?v=__V__"></script>
 </body>
 </html>

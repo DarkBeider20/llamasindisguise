@@ -83,7 +83,7 @@ socket.on('state', v => {
   if (v.over && overShownFor !== ROOM.code + v.over.name + v.log.length) { overShownFor = ROOM.code + v.over.name + v.log.length; showOver(); }
 });
 socket.on('toast', ({ msg, cls }) => toast(msg, cls));
-socket.on('attack', ({ card, text }) => { banner(card, text); setTimeout(hideBanner, 1600); });
+socket.on('attack', ({ card, text }) => { banner(card, text); setTimeout(hideBanner, 1600); window.RebanoMusic && window.RebanoMusic.sfx(card.type); });
 socket.on('prompt', pr => queuePrompt(pr));
 socket.on('promptClose', ({ id }) => dropPrompt(id));
 socket.on('kicked', () => { ROOM = null; V = null; store.del('rb_room'); closeModal(true); renderHome(); toast('El anfitrión te sacó de la sala.', 'atk'); });
@@ -145,7 +145,7 @@ const others = () => V.players.map((p, i) => ({ p, i })).filter(x => x.i !== V.y
 
 /* ---------------- pantallas: inicio y sala ---------------- */
 function renderHome(prefill) {
-  document.body.classList.remove('in-game'); clearRivals();
+  document.body.classList.remove('in-game', 'in-lobby'); clearRivals(); showSide(false);
   ROOM = null; V = null;
   $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button>`;
   const sample = [{ kind: 'sheep', type: 'lucha' }, { kind: 'action', type: 'expose' }, { kind: 'sheep', type: 'dorada' }, { kind: 'attack', type: 'puma' }, { kind: 'sheep', type: 'rock' }];
@@ -176,10 +176,10 @@ async function doJoin() {
 }
 function shareLink() { return `${location.origin}${location.pathname}?sala=${ROOM.code}`; }
 function renderLobby() {
-  document.body.classList.remove('in-game'); clearRivals();
+  document.body.classList.remove('in-game'); document.body.classList.add('in-lobby'); clearRivals(); setTab('chat'); showSide(true);
   if (!ROOM) return renderHome();
   const isHost = ROOM.you === ROOM.host && ROOM.you >= 0;
-  $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir de la sala</button>`;
+  $('#stats').innerHTML = `<button class="btn small mob-only chatbtn" data-a="chatopen">Chat<b class="badge" ${unread ? '' : 'hidden'}>${unread}</b></button><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir<span class="desk-txt"> de la sala</span></button>`;
   const slots = Array.from({ length: ROOM.max }, (_, i) => {
     const s = ROOM.seats[i];
     if (!s) return `<li class="seat empty"><span class="av ghost">+</span><span>Asiento libre</span></li>`;
@@ -240,10 +240,10 @@ function renderRivals(html) {
 function clearRivals() { const R = $('#rivals'); if (R) { R.hidden = true; R.innerHTML = ''; } }
 function timeLeft() { return Math.max(0, Math.ceil((V.deadline + clockSkew - Date.now()) / 1000)); }
 function renderGame() {
-  document.body.classList.add('in-game');
+  document.body.classList.add('in-game'); document.body.classList.remove('in-lobby');
   const p = me(), cur = V.players[V.turn];
   const waitingName = V.waiting >= 0 ? V.players[V.waiting].name : cur.name;
-  $('#stats').innerHTML = `<span class="pill">Sala ${ROOM.code}</span><span class="pill">Meta: ${V.target} rebaños</span><button class="btn small mob-only" data-a="log">Bitácora</button><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir</button>`;
+  $('#stats').innerHTML = `<span class="pill">Sala ${ROOM.code}</span><span class="pill">Meta: ${V.target} rebaños</span><button class="btn small mob-only chatbtn" data-a="chatopen">Chat<b class="badge" ${unread ? '' : 'hidden'}>${unread}</b></button><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir</button>`;
   const stripH = others().map(({ p: q, i }) => {
     const on = V.turn === i && !V.over;
     const dots = q.flocks.map(f => { const t = f.wild ? ((f.cards && f.cards[0]) || 'astro') : f.type; return `<i class="${f.exposed ? 'x' : ''}" style="--c:${f.wild ? '#5d6550' : SH[f.type].c}" title="${fname(f)}${f.exposed ? ' (expuesto)' : ''}"><img src="img/${t}.webp" alt=""></i>`; }).join('');
@@ -278,7 +278,9 @@ function renderGame() {
     <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}<div class="flocks myf">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
       <div class="hand">${handH || '<span class="empty">Mano vacía</span>'}</div>
       <div class="bar">${hint ? `<p class="hint">${hint}</p>` : ''}${ops.join('')}</div></section>
-  </div><aside class="log" aria-label="Bitácora"><p class="label">Bitácora</p><ol>${V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('')}</ol></aside></div>`;
+  </div></div>`;
+  $('#logList').innerHTML = V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('');
+  showSide(true);
 }
 setInterval(() => { const t = $('#ttimer'); if (t && V) { const s = timeLeft(); t.textContent = `${s} s`; t.classList.toggle('low', s <= 15); } }, 1000);
 
@@ -571,6 +573,55 @@ document.addEventListener('pointerup', e => endDrag(e, false));
 document.addEventListener('pointercancel', e => endDrag(e, true));
 document.addEventListener('click', e => { if (swallowClick) { e.stopImmediatePropagation(); e.preventDefault(); swallowClick = false; } }, true);
 
+/* ---------------- chat ---------------- */
+let CHAT = [], unread = 0, sideTab = 'log';
+const REACTS = ['jaja', '¡Noo!', 'GG', '%$%$·"$$·', '¡Te voy a arrebatar!', 'Buen intento…', 'F'];
+const MALD = '%$%$·"$$·';
+function setTab(t) {
+  sideTab = t; const side = $('#side'); side.dataset.tab = t;
+  side.querySelectorAll('.side-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  if (t === 'chat') { markRead(); scrollChat(); }
+}
+function showSide(on) { const side = $('#side'); side.hidden = !on; if (!on) side.classList.remove('open'); if (on && !side.dataset.tab) setTab(sideTab); }
+const isMobile = () => matchMedia('(max-width: 640px)').matches;
+function chatVisible() { const side = $('#side'); if (side.hidden || sideTab !== 'chat') return false; return isMobile() ? side.classList.contains('open') : true; }
+function paintBadges() {
+  const b = $('#chatBadge'); b.hidden = !unread; b.textContent = unread;
+  document.querySelectorAll('.chatbtn .badge').forEach(x => { x.hidden = !unread; x.textContent = unread; });
+}
+function markRead() { unread = 0; paintBadges(); }
+function chatLi(m) {
+  const mine = ROOM && m.seat === ROOM.you, mald = m.text === MALD;
+  return `<li class="${mine ? 'me-msg' : ''} ${m.react ? 'react' : ''} ${mald ? 'mald' : ''}" style="--c:${AVC[m.seat % AVC.length]}"><b>${esc(m.name)}:</b> <span>${esc(m.text)}</span></li>`;
+}
+function scrollChat() { const l = $('#chatList'); l.scrollTop = l.scrollHeight; }
+function renderChat() {
+  $('#chatList').innerHTML = CHAT.length ? CHAT.map(chatLi).join('') : '<li class="chat-empty">Todavía no hay mensajes. Saluda o usa una reacción rápida.</li>';
+  scrollChat();
+}
+function addChat(m) {
+  CHAT.push(m); if (CHAT.length > 50) CHAT.shift();
+  const l = $('#chatList'), atBottom = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
+  const empty = l.querySelector('.chat-empty'); if (empty) empty.remove();
+  l.insertAdjacentHTML('beforeend', chatLi(m)); while (l.children.length > 50) l.firstChild.remove();
+  if (atBottom || (ROOM && m.seat === ROOM.you)) scrollChat();
+  if (!chatVisible() && !(ROOM && m.seat === ROOM.you)) { unread++; paintBadges(); toast(`${m.name}: ${m.text}`, m.text === MALD ? 'atk' : ''); }
+}
+async function sendChat(text, react) {
+  text = String(text || '').trim(); if (!text) return;
+  const r = await emit('chat', { text, react: !!react });
+  if (r.error) toast(r.error, 'atk'); else if (!react) $('#chatIn').value = '';
+}
+socket.on('chatHistory', list => { CHAT = list || []; unread = 0; renderChat(); paintBadges(); });
+socket.on('chat', m => addChat(m));
+$('#reacts').innerHTML = REACTS.map(r => `<button type="button" class="${r === MALD ? 'mald' : ''}" data-react="${esc(r)}">${esc(r)}</button>`).join('');
+$('#chatForm').onsubmit = e => { e.preventDefault(); sendChat($('#chatIn').value, false); };
+$('#side').addEventListener('click', e => {
+  const t = e.target.closest('.side-tab'); if (t) return setTab(t.dataset.tab);
+  const r = e.target.closest('[data-react]'); if (r) return sendChat(r.dataset.react, true);
+});
+setTab('log');
+
 /* ---------------- reglas ---------------- */
 const RULES = `<div class="rules">
 <h4>Objetivo</h4><ul><li>3 alpacas iguales en tu mano forman un <b>rebaño</b> al instante. Solo un rebaño de cada tipo.</li><li>Gana quien junte los rebaños necesarios (5 con 2–3 jugadores, 4 con 4, 3 con 5–8) <b>sin ninguno desenmascarado</b>.</li><li>O quien junte las <b>3 Alpacas Doradas</b>: victoria instantánea.</li></ul>
@@ -599,6 +650,8 @@ document.addEventListener('click', async e => {
       catch (_) { const r = document.createRange(); r.selectNodeContents($('#lnk')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Copia el enlace seleccionado.', ''); }
       return;
     }
+    if (v === 'chatopen' || (v === 'log' && isMobile())) { const side = $('#side'); side.hidden = false; side.classList.add('open'); setTab(v === 'log' ? 'log' : 'chat'); return; }
+    if (v === 'chatclose') { $('#side').classList.remove('open'); return; }
     if (v === 'log' && V) return info('Bitácora', `<ol class="loglist">${V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('')}</ol>`);
     if (v === 'discard' && V) return info(`Descarte (${V.discard.length})`, `<div class="picker">${[...V.discard].reverse().map(c => cardHTML(c, { attrs: 'tabindex="-1"' })).join('')}</div>`);
   }

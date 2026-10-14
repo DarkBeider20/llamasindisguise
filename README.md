@@ -37,6 +37,7 @@ de eso tarda alrededor de un minuto. Si se reinicia, las partidas en curso se pi
 - Cada turno dura hasta 1 minuto; si se acaba el tiempo, el juego roba por ti.
 - Si alguien se desconecta, puede volver a entrar a la misma sala desde el mismo navegador.
 - Al terminar, el anfitrión puede pedir revancha o volver a la sala.
+- Hay chat en la sala de espera y en la partida, con reacciones rápidas.
 
 Rebaños para ganar: 5 con 2–3 jugadores, 4 con 4, 3 con 5–8 (uno menos en partida corta).
 
