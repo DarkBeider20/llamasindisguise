@@ -1,5 +1,7 @@
 'use strict';
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
@@ -8,8 +10,18 @@ const { BOT_NAMES, MAX_SEATS, targetFor } = require('./src/data');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
+// La página se sirve con un número de versión en el enlace a app.js: cada deploy obliga al navegador
+// a bajar el app.js nuevo aunque tenga uno viejo guardado.
+const PUB = path.join(__dirname, 'public');
+const BUILD = crypto.createHash('sha1')
+  .update(fs.readFileSync(path.join(PUB, 'app.js'))).update(fs.readFileSync(path.join(PUB, 'index.html')))
+  .digest('hex').slice(0, 8);
+const INDEX = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace(/__V__/g, BUILD);
+const sendIndex = (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.type('html').send(INDEX); };
+app.get(['/', '/index.html'], sendIndex);
 // HTML y JS siempre se revalidan (así cada deploy se ve al instante); las imágenes se guardan 7 días.
-app.use(express.static(path.join(__dirname, 'public'), {
+app.use(express.static(PUB, {
+  index: false,
   setHeaders: (res, file) => {
     if (/\.(html|js|css)$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
     else res.setHeader('Cache-Control', 'public, max-age=604800');
@@ -235,4 +247,4 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-server.listen(PORT, () => console.log(`Rebaño de Incógnito escuchando en http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Rebaño de Incógnito (versión ${BUILD}) escuchando en http://localhost:${PORT}`));

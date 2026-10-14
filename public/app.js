@@ -555,7 +555,8 @@ const RULES = `<div class="rules">
 <h4>Alpacas</h4><div class="rgrid">${SHEEP.map(x => `<div class="ritem"><img src="img/${x.k}.webp" alt="" style="--c:${x.c}"><span><b>${x.n}</b><small>×9 en el mazo</small></span></div>`).join('')}</div>
 <h4>Acciones</h4><div class="rlist">${Object.entries(ACT).map(([k, a]) => `<div class="rrow"><img src="img/a-${k}.webp" alt="Carta ${a.n}"><div><b>${a.n}</b> <small>${a.o} · ×${a.q}</small><p>${a.d}</p></div></div>`).join('')}</div>
 <h4>Ataques</h4><div class="rlist">${Object.entries(ATK).map(([k, a]) => `<div class="rrow atk"><img src="img/${k}.webp" alt="Carta ${a.n}"><div><b>${a.n}</b> <small>Ataque · ×1</small><p>Devora todos los rebaños desenmascarados. Si no hay ninguno: ${a.d}</p></div></div>`).join('')}</div>
-<p class="note">Mazo: 72 alpacas (8 tipos × 9), 3 Alpacas Doradas, 64 acciones, 6 ataques.</p></div>`;
+<p class="note">Mazo: 72 alpacas (8 tipos × 9), 3 Alpacas Doradas, 64 acciones, 6 ataques.</p>
+<p class="note">Versión ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`;
 
 /* ---------------- clics ---------------- */
 document.addEventListener('click', async e => {

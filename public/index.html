@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="build" content="__V__">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Rebaño de Incógnito</title>
 <meta name="description" content="Juego de cartas online: junta rebaños de alpacas disfrazadas y sobrevive a los depredadores andinos.">
@@ -433,7 +434,9 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .hand .card:first-child{margin-left:0}
   .hand .card:hover{transform:none}
   .hand .card.sel{transform:translateY(-12px)}
-  .hand .card.dg{touch-action:pan-x;cursor:pointer}
+  .hand .card{touch-action:pan-x}
+  .hand .card.dg{cursor:pointer}
+  .hand .card img{-webkit-touch-callout:none;pointer-events:none}
   .hand .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   .hand .card.lp{transition:transform .3s ease,box-shadow .3s ease;transform:translateY(-8px) scale(1.04);box-shadow:0 0 0 3px var(--gold),0 10px 18px rgba(0,0,0,.25)}
   .hand .card .nm{font-size:10px;line-height:1.05;overflow-wrap:anywhere;padding:4px 2px}
@@ -535,6 +538,6 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
 <div id="tsheet" hidden></div>
 <div id="net" hidden>Reconectando con el servidor…</div>
 <script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=__V__"></script>
 </body>
 </html>
