@@ -1,6 +1,6 @@
 # Rebaño de Incógnito (online)
 
-Juego de cartas multijugador: alpacas disfrazadas, depredadores andinos y salas de hasta 8 jugadores.
+Juego de cartas multijugador: alpacas disfrazadas, depredadores andinos y salas de hasta 12 jugadores y hasta 8 espectadores.
 El servidor guarda la partida y cada jugador ve solo su mano. Los asientos vacíos se pueden llenar con bots.
 
 ## Probarlo en tu computadora
@@ -33,13 +33,13 @@ de eso tarda alrededor de un minuto. Si se reinicia, las partidas en curso se pi
 ## Cómo se juega online
 
 - Uno crea la sala y comparte el código de 4 letras o el enlace.
-- El anfitrión agrega bots, elige partida corta y pulsa **Empezar partida** (mínimo 2 jugadores, máximo 8).
+- El anfitrión agrega bots, elige partida corta y pulsa **Empezar partida** (mínimo 2 jugadores, máximo 12).
 - Cada turno dura 35 segundos: cada carta de acción suma 10 segundos y cambiar, comprar, pagar o formar el comodín suman 5; si se acaba el tiempo, el juego roba por ti.
 - Si alguien se desconecta, puede volver a entrar a la misma sala desde el mismo navegador.
 - Al terminar, el anfitrión puede pedir revancha o volver a la sala.
 - Hay chat en la sala de espera y en la partida, con reacciones rápidas.
 
-Rebaños para ganar: 5 con 2–3 jugadores, 4 con 4, 3 con 5–8 (uno menos en partida corta).
+Rebaños para ganar: 5 con 2–3 jugadores, 4 con 4, 3 con 5–12 (uno menos en partida corta).
 
 ## Estructura
 

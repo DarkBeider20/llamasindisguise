@@ -28,9 +28,10 @@ const ATK = {
   oso: { n: 'Oso', d: 'Se descarta todo el Campo y se repone.' },
   aguila: { n: 'Águila', d: 'Todos roban 1 carta.' },
 };
-const BOT_NAMES = ['Rosa', 'Benito', 'Lucha', 'Paco', 'Dora', 'Tito', 'Nina'];
-const MAX_SEATS = 8;
-// Rebaños para ganar según el número de jugadores (2-3: 5, 4: 4, 5-8: 3).
+const BOT_NAMES = ['Rosa', 'Benito', 'Lucha', 'Paco', 'Dora', 'Tito', 'Nina', 'Quique', 'Maru', 'Pancho', 'Chela'];
+const MAX_SEATS = 12;
+const MAX_SPECTATORS = 8;
+// Rebaños para ganar según el número de jugadores (2-3: 5, 4: 4, 5-12: 3).
 const targetFor = (n, short) => (n <= 3 ? 5 : n === 4 ? 4 : 3) - (short ? 1 : 0);
 
-module.exports = { SHEEP, GOLD, SH, ACT, ATK, BOT_NAMES, MAX_SEATS, targetFor };
+module.exports = { SHEEP, GOLD, SH, ACT, ATK, BOT_NAMES, MAX_SEATS, MAX_SPECTATORS, targetFor };

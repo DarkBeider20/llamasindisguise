@@ -437,7 +437,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .hand .card:first-child{margin-left:0}
   .hand .card:hover{transform:none}
   .hand .card.sel{transform:translateY(-12px)}
-  .hand .card{touch-action:pan-x}
+  .hand .card,.hand .card.dg{touch-action:pan-x} /* deslizar mueve la mano; mantener quieto abre la carta y luego se arrastra */
   .hand .card.dg{cursor:pointer}
   .hand .card img{-webkit-touch-callout:none;pointer-events:none}
   .hand .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -624,13 +624,43 @@ body.in-lobby .side-tab[data-tab="log"]{display:none}
   .em-opt{min-width:0}
   .me-head .embtn{width:30px;height:28px}
 }
+
+/* ---------- espectadores ---------- */
+.modeseg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:0 0 10px;border-radius:14px;background:var(--bg);border:2px solid var(--line)}
+.modeseg label{position:relative;cursor:pointer}
+.modeseg input{position:absolute;opacity:0;pointer-events:none}
+.modeseg span{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:10px;font-weight:800;font-size:14px;color:var(--muted);transition:background .15s,color .15s}
+.modeseg input:checked+span{background:var(--panel);color:var(--ink);box-shadow:0 1px 0 var(--line),0 2px 6px rgba(0,0,0,.12)}
+.modeseg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.av.watch{background:var(--panel);color:var(--muted);border:2px dashed var(--muted);box-shadow:none}
+.seat.watcher{background:transparent;border-style:dashed}
+.seats.watchers{margin-top:2px}
+.watchpill{display:inline-flex;align-items:center;gap:5px}
+.watchpill svg{flex:none}
+.me.spec{border-style:dashed}
+.me.spec .me-head{flex-wrap:wrap}
+.spec-sub{margin:0;flex:1 1 220px;min-width:0;font-size:13px;color:var(--muted)}
+.spec-sub b{color:var(--ink)}
+.spec-next{flex:none}
+#chatList li.wmsg b{color:var(--muted)}
+.weye{display:inline-flex;vertical-align:-3px;margin-right:3px}
+.em-who{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--muted);margin-left:2px}
+@media (max-width:640px){
+  .top .stats .pill.watchpill{display:inline-flex;padding:4px 8px}
+  .me.spec{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  .spec-sub{flex-basis:100%;order:4;font-size:12px}
+  .me.spec h3{font-size:16px}
+}
+@media (min-width:641px){
+  body.in-game .me.spec .me-head{flex-wrap:wrap;row-gap:6px}
+}
 </style>
 </head>
 <body>
 <div id="app">
   <header class="top">
     <span class="logo" aria-hidden="true" id="logo"></span>
-    <h1 class="brand">Rebaño de Incógnito<small>Juego de cartas online · hasta 8 jugadores</small></h1>
+    <h1 class="brand">Rebaño de Incógnito<small>Juego de cartas online · hasta 12 jugadores</small></h1>
     <div class="stats" id="stats"></div>
     <button class="btn small music" id="musicBtn" aria-pressed="true" title="Silenciar música"><svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path class="note" d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/><path class="slash" d="M3 3l18 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="sr">Música</span></button>
   </header>
