@@ -204,9 +204,12 @@ function renderLobby() {
 /* ---------------- partida ---------------- */
 function render() {
   if (!ROOM) return;
-  if (ROOM.phase === 'lobby' || !V) return renderLobby();
+  if (ROOM.phase === 'lobby' || !V) { document.documentElement.style.setProperty('--dock', '0px'); return renderLobby(); }
   const pc = peekEl && peekEl.dataset.cid;
+  const hs = $('.hand') ? $('.hand').scrollLeft : 0;
   renderGame();
+  const hand = $('.hand'); if (hand) hand.scrollLeft = hs;
+  const dock = $('.me'); document.documentElement.style.setProperty('--dock', dock ? dock.offsetHeight + 'px' : '0px');
   if (!pc) { if (peekEl && !peekEl.isConnected) hidePeek(); return; }
   const el = [...document.querySelectorAll(`.card[data-cid="${pc}"]`)].find(x => !x.closest('#banner'));
   el ? showPeek(el) : hidePeek();
@@ -215,13 +218,18 @@ function timeLeft() { return Math.max(0, Math.ceil((V.deadline + clockSkew - Dat
 function renderGame() {
   const p = me(), cur = V.players[V.turn];
   const waitingName = V.waiting >= 0 ? V.players[V.waiting].name : cur.name;
-  $('#stats').innerHTML = `<span class="pill">Sala ${ROOM.code}</span><span class="pill">Meta: ${V.target} rebaños</span><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir</button>`;
+  $('#stats').innerHTML = `<span class="pill">Sala ${ROOM.code}</span><span class="pill">Meta: ${V.target} rebaños</span><button class="btn small mob-only" data-a="log">Bitácora</button><button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir</button>`;
   const oppH = others().map(({ p: q, i }) => {
     const on = V.turn === i && !V.over, k = Math.min(q.handCount, 9);
     return `<div class="opp ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}"><div class="who">${avatar(q.name, i)}<span><span class="nm">${esc(q.name)}${q.bot ? ' <small class="botb">bot</small>' : ''}</span><br><span class="sub">${q.connected || q.bot ? `${q.handCount} carta${q.handCount === 1 ? '' : 's'}` : 'Desconectado'}</span></span>
       ${on ? `<span class="turnflag" style="${bobDelay()}">Su turno</span>` : `<span class="backs">${Array.from({ length: k }, (_, j) => `<i style="--r:${(j - (k - 1) / 2) * 7}deg"></i>`).join('')}</span>`}</div>
       <div class="flocks">${q.flocks.length ? q.flocks.map(flockHTML).join('') : '<span class="empty">Sin rebaños todavía</span>'}</div>
       <div class="who" style="margin-top:8px">${pips(q)}</div></div>`;
+  }).join('');
+  const stripH = others().map(({ p: q, i }) => {
+    const on = V.turn === i && !V.over;
+    const dots = q.flocks.map(f => `<i class="${f.exposed ? 'x' : ''}" style="--c:${f.wild ? '#5d6550' : SH[f.type].c}"></i>`).join('');
+    return `<button class="rv ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}" data-rival="${i}" aria-label="Ver a ${esc(q.name)}">${avatar(q.name, i)}<span class="rv-b"><span class="rv-n">${esc(q.name)}</span><span class="rv-s">${q.connected || q.bot ? `${q.handCount} cartas` : 'Desconectado'}</span><span class="rv-f">${dots || '<em>sin rebaños</em>'}<b>${q.flocks.length}/${V.target}</b></span></span>${on ? '<span class="rv-t">turno</span>' : ''}</button>`;
   }).join('');
   const top = V.discard[V.discard.length - 1];
   const s = selCards(), ops = [], mine = canAct();
@@ -235,7 +243,9 @@ function renderGame() {
     if (s.length === 2 && p.flocks.some(f => f.exposed)) ops.push(`<button class="btn danger" data-op="pay">Pagar 2 para quitar Desenmascarar</button>`);
     if (s.length === 5 && !hasFlockMine('wild') && s.every(c => c.kind === 'sheep' && !isGold(c)) && new Set(s.map(c => c.type)).size === 5) ops.push(`<button class="btn" data-op="wild">Formar rebaño comodín</button>`);
     ops.push(`<span class="ttimer" id="ttimer">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
-    if (!s.length) hint = '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
+    if (!s.length) hint = isCoarse()
+      ? '<b>Tu turno.</b> Toca 1 acción para jugarla, 1 carta para cambiarla' + (V.traded ? ' (ya cambiaste)' : '') + ', 2 iguales para comprar o 5 alpacas distintas para el comodín.'
+      : '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
     else if (s.length === 1 && s[0].type === 'nice') hint = '¡Buen intento! se usa sola: te la ofreceremos cuando alguien juegue una acción en tu contra.';
     if (p.flocks.some(f => f.exposed)) hint += ' <b>Tienes un rebaño desenmascarado:</b> elige 2 cartas cualesquiera para pagar y protegerlo.';
   } else if (!V.over) hint = pending || (V.busy && V.waiting === V.you) ? 'Resolviendo…' : `Turno de <b>${esc(waitingName)}</b>. Espera tu turno.`;
@@ -243,11 +253,12 @@ function renderGame() {
   const handH = H.map((c, i) => { const f = fresh(c); return cardHTML(c, { cls: (sel.has(c.id) ? 'sel ' : '') + f.cls + (canDragCard(c) ? ' dg' : ''), style: `${f.style}--r:${((i - m) * 2.2).toFixed(1)}deg;--y:${(Math.abs(i - m) * 1.6).toFixed(1)}px;--ov:${!i ? 0 : (H[i - 1].kind !== c.kind ? 14 : H[i - 1].type !== c.type ? ov + 6 : ov)}px;`, attrs: `data-h="${c.id}" aria-pressed="${sel.has(c.id)}"` }); }).join('');
   const myTurnNow = V.turn === V.you && !V.over;
   $('#board').innerHTML = `<div class="game"><div class="zone">
-    <div><p class="label">Rivales</p><div class="opps">${oppH}</div></div>
-    <section class="table" aria-label="Mesa"><div><p class="label">El Campo</p><div class="field">${V.field.map(c => { const f = fresh(c); return cardHTML(c, { cls: f.cls, style: f.style, attrs: 'tabindex="-1"' }); }).join('') || '<div class="card ghost"></div>'}</div></div>
+    <div class="rivals-strip" aria-label="Rivales">${stripH}</div>
+    <div class="opps-wrap"><p class="label">Rivales</p><div class="opps">${oppH}</div></div>
+    <section class="table" aria-label="Mesa"><p class="label tbl-meta mob-only">Sala ${ROOM.code} · meta ${V.target} rebaños</p><div><p class="label">El Campo</p><div class="field">${V.field.map(c => { const f = fresh(c); return cardHTML(c, { cls: f.cls, style: f.style, attrs: 'tabindex="-1"' }); }).join('') || '<div class="card ghost"></div>'}</div></div>
       <div><p class="label">Pilas</p><div class="pileset"><div class="pile"><div class="deckstack"><div class="card back"></div></div>Mazo · ${V.deck}</div>
       <div class="pile">${top ? cardHTML(top, { attrs: 'data-a="discard" title="Ver descarte"' }) : '<div class="card ghost"></div>'}Descarte · ${V.discard.length}</div></div></div></section>
-    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}${p ? pips(p) : ''}</div>
+    <section class="me ${myTurnNow ? 'turn' : ''}"><div class="me-head">${avatar(p ? p.name : '?', V.you)}<h3>${esc(p ? p.name : 'Espectador')}</h3>${myTurnNow ? `<span class="turnflag" style="margin-left:0;${bobDelay()}">Tu turno</span>` : ''}${p ? pips(p) : ''}<button class="ticker mob-only" data-a="log" aria-label="Abrir bitácora">${esc((V.log[0] && V.log[0].msg) || '')}</button></div>
       <div class="flocks">${p && p.flocks.length ? p.flocks.map(flockHTML).join('') : '<span class="empty">Junta 3 alpacas iguales y el rebaño se forma solo.</span>'}</div>
       <div class="hand">${handH || '<span class="empty">Mano vacía</span>'}</div>
       <div class="bar">${ops.join('')}${hint ? `<p class="hint">${hint}</p>` : ''}</div></section>
@@ -420,6 +431,7 @@ function peekHTML(kind, type) {
   return `<div class="pk-card" style="--pc:${col}"><img src="${img}" alt=""></div><div class="pk-info" style="--pc:${col}"><span class="pk-tag">${tag}</span><h4>${name}</h4><p>${desc}</p>${extra ? `<p class="pk-x">${extra}</p>` : ''}</div>`;
 }
 const canHover = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+const isCoarse = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
 let peekEl = null, peekBlock = false;
 function showPeek(el) {
   if (peekBlock) return;
@@ -444,6 +456,7 @@ if (canHover) {
 /* ---------------- arrastrar cartas ---------------- */
 let drag = null, swallowClick = false;
 document.addEventListener('pointerdown', e => {
+  if (isCoarse()) return; // en el celular se juega tocando: así la mano se puede deslizar
   const el = e.target.closest('.hand .card[data-h]'); if (!el || e.button > 0) return;
   const hc0 = myHand().find(c => c.id === +el.dataset.h); if (!canDragCard(hc0)) return;
   drag = { el, card: hc0, id: hc0.id, x: e.clientX, y: e.clientY, on: false, ghost: null, hot: null, pid: e.pointerId };
@@ -513,7 +526,13 @@ document.addEventListener('click', async e => {
       catch (_) { const r = document.createRange(); r.selectNodeContents($('#lnk')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Copia el enlace seleccionado.', ''); }
       return;
     }
+    if (v === 'log' && V) return info('Bitácora', `<ol class="loglist">${V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('')}</ol>`);
     if (v === 'discard' && V) return info(`Descarte (${V.discard.length})`, `<div class="picker">${[...V.discard].reverse().map(c => cardHTML(c, { attrs: 'tabindex="-1"' })).join('')}</div>`);
+  }
+  const rv = e.target.closest('[data-rival]');
+  if (rv && V) {
+    const i = +rv.dataset.rival, q = V.players[i];
+    return info(esc(q.name), `<p>${q.bot ? 'Bot · ' : ''}${q.handCount} carta${q.handCount === 1 ? '' : 's'} en la mano · ${q.flocks.length} de ${V.target} rebaños ${pips(q)}</p><div class="flocks rv-flocks">${q.flocks.length ? q.flocks.map(flockHTML).join('') : '<span class="empty">Sin rebaños todavía</span>'}</div>`);
   }
   const k = e.target.closest('[data-kick]');
   if (k) { const r = await emit('kick', { seat: +k.dataset.kick }); if (r.error) toast(r.error, 'atk'); return; }
