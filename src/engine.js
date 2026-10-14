@@ -17,7 +17,7 @@ const isGold = c => c && c.kind === 'sheep' && c.type === 'dorada';
 const cn = c => c.kind === 'sheep' ? 'Alpaca ' + SH[c.type].n : c.kind === 'action' ? ACT[c.type].n : ATK[c.type].n;
 const pub = c => ({ id: c.id, kind: c.kind, type: c.type });
 
-const TIMING = { bot: 900, attack: 1700, nice: 15000, pick: 20000, turn: 60000, turnAway: 6000 };
+const TIMING = { bot: 900, attack: 1700, nice: 15000, pick: 20000, turn: 35000, turnBonus: 10000, smallBonus: 5000, turnAway: 6000 };
 
 function createGame(seats, opts, hooks) {
   let uid = 0, fid = 0;
@@ -492,6 +492,9 @@ function createGame(seats, opts, hooks) {
       run = () => playAction(p, cards, pl);
     } else return { error: 'Jugada desconocida.' };
 
+    // El reloj se pausa mientras se resuelve la jugada (p. ej. esperando un ¡Buen intento! del rival)
+    // Cada carta de acción suma 10 s; cambiar, comprar, pagar un Desenmascarar o formar el comodín suman 5 s.
+    const remain = Math.max(0, S.deadline - Date.now());
     S.busy = true; render();
     try {
       const r = await run();
@@ -500,6 +503,10 @@ function createGame(seats, opts, hooks) {
       if (e instanceof Over) endGame(e.w, e.gold);
       else if (!(e instanceof Stale)) console.error(e);
     } finally {
+      if (S.alive && S.waiting === p && !forced) {
+        S.deadline = Date.now() + Math.max(remain, 3000 * D) + (op === 'play' ? TIMING.turnBonus : ['trade', 'buy', 'pay', 'wild'].includes(op) ? TIMING.smallBonus : 0) * D;
+        armTurnTimer(p);
+      }
       S.busy = false; render();
     }
     return { ok: true };

@@ -43,12 +43,12 @@
     n.connect(nf); nf.connect(ng); ng.connect(master);
     [o, o2, vib].forEach(x => { x.start(t); x.stop(t + dur + 0.1); }); n.start(t); n.stop(t + 0.15);
   }
-  function pluck(t, freq, vol) {
+  function pluck(t, freq, vol, out) {
     const o = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
     o.type = 'sawtooth'; o.frequency.value = freq;
     fl.type = 'lowpass'; fl.frequency.setValueAtTime(3200, t); fl.frequency.exponentialRampToValueAtTime(500, t + 0.25);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.32);
-    o.connect(fl); fl.connect(g); g.connect(master); o.start(t); o.stop(t + 0.35);
+    o.connect(fl); fl.connect(g); g.connect(out || master); o.start(t); o.stop(t + 0.35);
   }
   function bombo(t, vol, out) {
     const o = ctx.createOscillator(), g = ctx.createGain();
@@ -93,12 +93,24 @@
     });
   }
   let sfxOut = null;
+  function chime(t) { // ¡tu turno!: arpegio ascendente de charango + campanita
+    [69, 73, 76, 81].forEach((m, i) => pluck(t + i * 0.085, f(m + 12), 0.16, sfxOut));
+    [88, 93].forEach((m, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t0 = t + 0.34 + i * 0.12;
+      o.type = 'sine'; o.frequency.value = f(m);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.38, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t0 + 1.1);
+      o.connect(g); g.connect(sfxOut); o.start(t0); o.stop(t0 + 1.2);
+    });
+  }
+  const BASE = () => (document.hidden ? 0 : 0.16);
   function sfx(kind) {
     if (!on || !ctx || !started) return;
     try {
+      if (ctx.state !== 'running') ctx.resume();
       const t = ctx.currentTime + 0.02;
-      // baja la música un momento para que se escuche el ataque
-      master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(0.04, t, 0.05); master.gain.setTargetAtTime(0.16, t + 1.4, 0.4);
+      // baja la música un momento para que se escuche el efecto
+      master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(0.04, t, 0.05); master.gain.setTargetAtTime(BASE(), t + 1.4, 0.4);
+      if (kind === 'turn') return chime(t);
       hit(t);
       if (kind === 'condor' || kind === 'aguila') screech(t + 0.05); else growl(t + 0.05);
     } catch (_) {}
@@ -155,7 +167,9 @@
   document.addEventListener('keydown', firstTouch, true);
   document.addEventListener('visibilitychange', () => {
     if (!ctx || !on || !started) return;
-    document.hidden ? ctx.suspend() : ctx.resume();
+    // en segundo plano se silencia la música, pero el audio sigue activo para avisar cuando es tu turno
+    master.gain.setTargetAtTime(document.hidden ? 0 : 0.16, ctx.currentTime, 0.2);
+    if (!document.hidden) ctx.resume();
   });
   document.addEventListener('DOMContentLoaded', () => {
     const b = document.getElementById('musicBtn'); if (b) b.addEventListener('click', toggle); paint();

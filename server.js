@@ -13,8 +13,10 @@ const app = express();
 // La página se sirve con un número de versión en el enlace a app.js: cada deploy obliga al navegador
 // a bajar el app.js nuevo aunque tenga uno viejo guardado.
 const PUB = path.join(__dirname, 'public');
+// Si falta algún archivo (por ejemplo, uno nuevo que no se subió), el servidor avisa en el log pero no se cae.
+const readOr = (f, fallback = '') => { try { return fs.readFileSync(path.join(PUB, f)); } catch (_) { console.warn(`Aviso: falta public/${f}`); return fallback; } };
 const BUILD = crypto.createHash('sha1')
-  .update(fs.readFileSync(path.join(PUB, 'app.js'))).update(fs.readFileSync(path.join(PUB, 'music.js'))).update(fs.readFileSync(path.join(PUB, 'index.html')))
+  .update(readOr('app.js')).update(readOr('music.js')).update(readOr('index.html'))
   .digest('hex').slice(0, 8);
 const INDEX = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace(/__V__/g, BUILD);
 const sendIndex = (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.type('html').send(INDEX); };

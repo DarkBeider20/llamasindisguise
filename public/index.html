@@ -582,6 +582,15 @@ body.in-lobby .side-tab[data-tab="log"]{display:none}
   #side.open{position:fixed;left:0;right:0;bottom:0;top:22vh;z-index:75;border-radius:20px 20px 0 0;border-width:2px 0 0;padding:12px max(14px, env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px, env(safe-area-inset-left,0px));box-shadow:0 -12px 30px rgba(0,0,0,.3)}
   #side.open .side-x{display:inline-flex}
 }
+
+/* miniaturas en la lista de ¡Dame! */
+.opt-thumb{width:30px;height:40px;border-radius:5px;object-fit:cover;object-position:50% 25%;flex:none;box-shadow:0 1px 3px rgba(0,0,0,.25);background:var(--paper)}
+.opt-thumb.any{display:inline-grid;place-items:center;font-family:var(--f-display);font-size:18px;color:var(--muted);border:2px dashed var(--line);box-shadow:none;background:transparent}
+.opt:has(.opt-thumb){padding:6px 12px;gap:12px}
+
+.ttimer.bonus{border-color:var(--ok);color:var(--ok);position:relative;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.ttimer.bonus::after{content:attr(data-bonus);position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-family:var(--f-display);font-size:14px;color:var(--ok);white-space:nowrap;animation:bonusup 1.4s ease-out forwards}
+@keyframes bonusup{from{opacity:1;transform:translate(-50%,6px)}to{opacity:0;transform:translate(-50%,-14px)}}
 </style>
 </head>
 <body>

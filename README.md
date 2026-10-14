@@ -34,7 +34,7 @@ de eso tarda alrededor de un minuto. Si se reinicia, las partidas en curso se pi
 
 - Uno crea la sala y comparte el código de 4 letras o el enlace.
 - El anfitrión agrega bots, elige partida corta y pulsa **Empezar partida** (mínimo 2 jugadores, máximo 8).
-- Cada turno dura hasta 1 minuto; si se acaba el tiempo, el juego roba por ti.
+- Cada turno dura 35 segundos: cada carta de acción suma 10 segundos y cambiar, comprar, pagar o formar el comodín suman 5; si se acaba el tiempo, el juego roba por ti.
 - Si alguien se desconecta, puede volver a entrar a la misma sala desde el mismo navegador.
 - Al terminar, el anfitrión puede pedir revancha o volver a la sala.
 - Hay chat en la sala de espera y en la partida, con reacciones rápidas.

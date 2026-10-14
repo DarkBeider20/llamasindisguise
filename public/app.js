@@ -54,6 +54,7 @@ let sel = new Set(); // cartas seleccionadas de tu mano
 let pending = false; // esperando respuesta del servidor
 let clockSkew = 0;   // diferencia de reloj con el servidor
 let overShownFor = null;
+let bonusUntil = 0, bonusSecs = 10;
 const seen = new Map(), fseen = new Map();
 
 /* ---------------- socket ---------------- */
@@ -77,12 +78,27 @@ socket.on('room', r => {
 });
 socket.on('state', v => {
   if (!v) { V = null; return ROOM ? renderLobby() : renderHome(); }
+  const prevDl = V && V.waiting === V.you ? V.deadline : 0;
   V = v; clockSkew = Date.now() - v.now;
+  if (prevDl && v.waiting === v.you && v.deadline - prevDl >= 4000) { bonusUntil = Date.now() + 1600; bonusSecs = v.deadline - prevDl >= 9000 ? 10 : 5; }
   const ids = new Set(v.hand.map(c => c.id)); [...sel].forEach(id => { if (!ids.has(id)) sel.delete(id); });
   render();
   if (v.over && overShownFor !== ROOM.code + v.over.name + v.log.length) { overShownFor = ROOM.code + v.over.name + v.log.length; showOver(); }
 });
-socket.on('toast', ({ msg, cls }) => toast(msg, cls));
+socket.on('toast', ({ msg, cls }) => {
+  toast(msg, cls);
+  if (msg === '¡Tu turno!') turnAlert();
+});
+// Aviso de turno: sonido, vibración en el celular y título de la pestaña parpadeando si estás en otra pestaña.
+let titleTimer = null; const BASE_TITLE = document.title;
+function turnAlert() {
+  window.RebanoMusic && window.RebanoMusic.sfx('turn');
+  if (navigator.vibrate) { try { navigator.vibrate([90, 60, 90]); } catch (_) {} }
+  if (document.hidden && !titleTimer) {
+    let k = 0; titleTimer = setInterval(() => { document.title = (k++ % 2) ? BASE_TITLE : '¡Tu turno! · Rebaño'; }, 900);
+  }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && titleTimer) { clearInterval(titleTimer); titleTimer = null; document.title = BASE_TITLE; } });
 socket.on('attack', ({ card, text }) => { banner(card, text); setTimeout(hideBanner, 1600); window.RebanoMusic && window.RebanoMusic.sfx(card.type); });
 socket.on('prompt', pr => queuePrompt(pr));
 socket.on('promptClose', ({ id }) => dropPrompt(id));
@@ -261,7 +277,7 @@ function renderGame() {
     if (allSame && V.field.length) ops.push(`<button class="btn" data-op="buy">Comprar del Campo (pagas estas 2)</button>`);
     if (s.length === 2 && p.flocks.some(f => f.exposed)) ops.push(`<button class="btn danger" data-op="pay">Pagar 2 para quitar Desenmascarar</button>`);
     if (s.length === 5 && !hasFlockMine('wild') && s.every(c => c.kind === 'sheep' && !isGold(c)) && new Set(s.map(c => c.type)).size === 5) ops.push(`<button class="btn" data-op="wild">Formar rebaño comodín</button>`);
-    ops.push(`<span class="ttimer" id="ttimer">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
+    ops.push(`<span class="ttimer ${Date.now() < bonusUntil ? 'bonus' : ''}" id="ttimer" data-bonus="+${bonusSecs} s">${timeLeft()} s</span><button class="btn go" data-op="draw">Robar y terminar turno</button>`);
     if (!s.length) hint = isCoarse()
       ? '<b>Tu turno.</b> Toca cartas para elegir. <b>Mantén presionada</b> una para verla en grande y, sin soltar, arrástrala al Campo o a la mesa.' + (V.traded ? ' Ya cambiaste con el Campo.' : '')
       : '<b>Tu turno.</b> Toca cartas de tu mano: 1 acción para jugarla, 2 iguales para comprar, 5 alpacas distintas para un rebaño comodín. ' + (V.traded ? 'Ya cambiaste con el Campo este turno.' : '<b>Arrastra una carta sobre el Campo</b> para cambiarla.') + ' Arrastra una acción a la mesa para jugarla.';
@@ -282,7 +298,7 @@ function renderGame() {
   $('#logList').innerHTML = V.log.map(l => `<li class="${l.cls}">${esc(l.msg)}</li>`).join('');
   showSide(true);
 }
-setInterval(() => { const t = $('#ttimer'); if (t && V) { const s = timeLeft(); t.textContent = `${s} s`; t.classList.toggle('low', s <= 15); } }, 1000);
+setInterval(() => { const t = $('#ttimer'); if (t && V) { const s = timeLeft(); t.textContent = `${s} s`; t.classList.toggle('low', s <= 10); t.classList.toggle('bonus', Date.now() < bonusUntil); } }, 500);
 
 /* ---------------- jugadas propias ---------------- */
 async function humanPlay(cards) {
@@ -301,7 +317,10 @@ async function humanPlay(cards) {
     if (!o.length) return toast('Ningún rival tiene cartas en la mano.', 'atk');
     const q = await ask({ title: t === 'steal' ? '¿A quién le hurtas?' : '¿A quién le pides?', options: o, cancel: true }); if (!q) return; pl.target = q.t;
     if (t === 'gimme') {
-      const wo = [{ label: 'Que elija qué darme', value: 'choice' }].concat(SHEEP.concat([GOLD]).map(s => ({ label: `Alpaca ${s.n}`, value: { kind: 'sheep', type: s.k } }))).concat(Object.entries(ACT).map(([k, a]) => ({ label: a.n, value: { kind: 'action', type: k } })));
+      const th = src => `<img class="opt-thumb" src="${src}" alt="" draggable="false">`;
+      const wo = [{ label: '<span class="opt-thumb any">?</span>Que elija qué darme', value: 'choice' }]
+        .concat(SHEEP.concat([GOLD]).map(s => ({ label: `${th(`img/${s.k}.webp`)}Alpaca ${s.n}`, value: { kind: 'sheep', type: s.k } })))
+        .concat(Object.entries(ACT).map(([k, a]) => ({ label: `${th(`img/a-${k}.webp`)}${a.n}`, value: { kind: 'action', type: k } })));
       const w = await ask({ title: '¿Qué le pides?', text: 'Si pides una carta concreta y no la tiene, no recibes nada.', options: wo, cancel: true }); if (!w) return; pl.want = w === 'choice' ? null : w;
     }
   } else if (t === 'yoink') {
@@ -575,7 +594,7 @@ document.addEventListener('click', e => { if (swallowClick) { e.stopImmediatePro
 
 /* ---------------- chat ---------------- */
 let CHAT = [], unread = 0, sideTab = 'log';
-const REACTS = ['jaja', '¡Noo!', 'GG', '%$%$·"$$·', '¡Te voy a arrebatar!', 'Buen intento…', 'F'];
+const REACTS = ['jaja', '¡Noo!', 'GG', '%$%$·"$$·', 'APURA MIER%$', '¡Te voy a arrebatar!', 'Buen intento…', 'F'];
 const MALD = '%$%$·"$$·';
 function setTab(t) {
   sideTab = t; const side = $('#side'); side.dataset.tab = t;
@@ -625,7 +644,7 @@ setTab('log');
 /* ---------------- reglas ---------------- */
 const RULES = `<div class="rules">
 <h4>Objetivo</h4><ul><li>3 alpacas iguales en tu mano forman un <b>rebaño</b> al instante. Solo un rebaño de cada tipo.</li><li>Gana quien junte los rebaños necesarios (5 con 2–3 jugadores, 4 con 4, 3 con 5–8) <b>sin ninguno desenmascarado</b>.</li><li>O quien junte las <b>3 Alpacas Doradas</b>: victoria instantánea.</li></ul>
-<h4>Tu turno</h4><ul><li>Juega tantas acciones como quieras.</li><li>Cambia 1 carta con el Campo (una vez por turno).</li><li>Compra: paga 2 cartas iguales y toma 1 del Campo (ilimitado).</li><li>Rebaño comodín: 5 alpacas de tipos distintos, una vez y solo en tu turno.</li><li>Roba 1 carta para terminar. Tienes 1 minuto por turno.</li></ul>
+<h4>Tu turno</h4><ul><li>Juega tantas acciones como quieras.</li><li>Cambia 1 carta con el Campo (una vez por turno).</li><li>Compra: paga 2 cartas iguales y toma 1 del Campo (ilimitado).</li><li>Rebaño comodín: 5 alpacas de tipos distintos, una vez y solo en tu turno.</li><li>Roba 1 carta para terminar. Tienes 35 segundos por turno: cada carta de acción suma 10 segundos, y cambiar, comprar, pagar un Desenmascarar o formar el comodín suman 5.</li></ul>
 <h4>Ataques</h4><ul><li>Se resuelven al aparecer. Devoran todos los rebaños desenmascarados; si no hay ninguno, todos sufren su efecto secundario.</li><li>Quitas un Desenmascarar de tu rebaño pagando 2 cartas en tu turno.</li></ul>
 <h4>Alpaca Dorada</h4><div class="rrow gold"><img src="img/dorada.webp" alt="Carta Alpaca Dorada"><div><b>Alpaca Dorada</b> <small>Legendaria · ×3</small><p>Junta las 3 en tu mano y ganas al instante. No forma rebaño ni cuenta para el comodín.</p></div></div>
 <h4>Alpacas</h4><div class="rgrid">${SHEEP.map(x => `<div class="ritem"><img src="img/${x.k}.webp" alt="" style="--c:${x.c}"><span><b>${x.n}</b><small>×9 en el mazo</small></span></div>`).join('')}</div>
