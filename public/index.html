@@ -387,6 +387,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   .zone{gap:10px;padding-bottom:calc(var(--dock,0px) + 14px)}
   .log,.opps-wrap{display:none}
   /* rivales: tira deslizable */
+  #rivals{margin-bottom:8px}
   .rivals-strip{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:max(16px, env(safe-area-inset-left,0px));margin-inline:calc(-1 * max(16px, env(safe-area-inset-left,0px)));padding:2px max(16px, env(safe-area-inset-right,0px)) 6px max(16px, env(safe-area-inset-left,0px));scrollbar-width:none}
   .rivals-strip::-webkit-scrollbar{display:none}
   .rv{flex:none;scroll-snap-align:start;display:flex;align-items:center;gap:8px;min-width:148px;max-width:190px;padding:6px 10px 6px 6px;border-radius:14px;border:2px solid var(--line);background:var(--panel);text-align:left;position:relative}
@@ -464,7 +465,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline
   body.in-game .brand small{display:none}
   body.in-game #board{flex:1;min-height:0}
   body.in-game .game{height:100%;grid-template-columns:minmax(0,1fr) 270px;gap:12px}
-  body.in-game .zone{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px}
+  body.in-game .zone{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
+  body.in-game #rivals{flex:none;margin-bottom:10px}
   body.in-game .log{max-height:none;height:100%;position:static;overflow:auto}
   /* rivales en una fila */
   .rivals-strip{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 4px;scrollbar-width:thin}
@@ -534,6 +536,7 @@ button{-webkit-tap-highlight-color:transparent}
     <h1 class="brand">Rebaño de Incógnito<small>Juego de cartas online · hasta 8 jugadores</small></h1>
     <div class="stats" id="stats"></div>
   </header>
+  <div id="rivals" class="rivals-strip" aria-label="Rivales" hidden></div>
   <main id="board"><p style="padding:40px 0;color:var(--muted)">Conectando…</p></main>
 </div>
 <div id="modal" hidden></div>

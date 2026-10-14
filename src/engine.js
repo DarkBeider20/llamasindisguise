@@ -214,10 +214,19 @@ function createGame(seats, opts, hooks) {
     }
     return cancelled;
   }
+  function wouldHurt(q, pl) {
+    if (pl.action === 'gimme' && pl.want) return q.hand.some(c => c.kind === pl.want.kind && c.type === pl.want.type);
+    if (pl.action === 'gimme' || pl.action === 'steal') return q.hand.length > 0;
+    if (pl.flock) return q.flocks.includes(pl.flock);
+    return true;
+  }
   async function wantsNice(q, { actor, pl, cancelled, side, chain }) {
     const a = pl.action, sd = side.get(q) ?? 0;
     const against = (sd === 1 && cancelled) || (sd === -1 && !cancelled);
     if (!against) return false;
+    // Al objetivo solo se le ofrece ¡Buen intento! si la jugada de verdad le quitaría algo
+    // (p. ej. ¡Dame! pidiendo una carta que no tiene no le hace nada).
+    if (sd === -1 && !wouldHurt(q, pl)) return false;
     if (!q.bot) {
       const left = q.hand.filter(c => c.kind === 'action' && c.type === 'nice').length;
       const rows = [`${actor.name} juega ${ACT[a].n}${describe(pl)}`]

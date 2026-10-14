@@ -16,14 +16,14 @@ const SH = Object.fromEntries(SHEEP.map(s => [s.k, s]).concat([['dorada', GOLD]]
 const isGold = c => c && c.kind === 'sheep' && c.type === 'dorada';
 const ACT = {
   take2: { n: 'Tomar 2', o: 'Take 2', q: 6, d: 'Toma 2 cartas del Campo.' },
-  restock: { n: 'Reponer', o: 'Restock', q: 4, d: 'Cambia toda tu mano por 5 nuevas (termina tu turno) o renueva el Campo.' },
-  yank: { n: 'Arrebatar', o: 'Yank', q: 5, d: 'Quita un rebaño a un rival con más rebaños que tú. Dos juntas: a cualquiera.' },
+  restock: { n: 'Reponer', o: 'Restock', q: 6, d: 'Cambia toda tu mano por 5 nuevas (termina tu turno) o renueva el Campo.' },
+  yank: { n: 'Arrebatar', o: 'Yank', q: 4, d: 'Quita un rebaño a un rival con más rebaños que tú. Dos juntas: a cualquiera.' },
   dig: { n: 'Escarbar', o: 'Dig', q: 6, d: 'Toma 1 carta del descarte.' },
-  expose: { n: 'Desenmascarar', o: 'Expose', q: 8, d: 'Colócala sobre un rebaño rival: el próximo Ataque lo devora.' },
+  expose: { n: 'Desenmascarar', o: 'Expose', q: 6, d: 'Colócala sobre un rebaño rival: el próximo Ataque lo devora.' },
   nice: { n: '¡Buen intento!', o: 'Nice Try', q: 8, d: 'Cancela una acción jugada en tu contra, o niega la cancelación de tu propia jugada.' },
-  draw2: { n: 'Robar 2', o: 'Draw 2', q: 7, d: 'Roba 2 cartas. No termina tu turno.' },
-  steal: { n: 'Hurtar', o: 'Steal', q: 7, d: 'Toma 1 carta al azar de la mano de un rival.' },
-  gimme: { n: '¡Dame!', o: 'Gimme', q: 7, d: 'Pide una carta concreta a un rival, o que él elija cuál darte.' },
+  draw2: { n: 'Robar 2', o: 'Draw 2', q: 6, d: 'Roba 2 cartas. No termina tu turno.' },
+  steal: { n: 'Hurtar', o: 'Steal', q: 8, d: 'Toma 1 carta al azar de la mano de un rival.' },
+  gimme: { n: '¡Dame!', o: 'Gimme', q: 8, d: 'Pide una carta concreta a un rival, o que él elija cuál darte.' },
   yoink: { n: 'Pellizcar', o: 'Yoink', q: 6, d: 'Toma la carta de arriba de cualquier rebaño, o una carta Desenmascarar.' } };
 const ATK = {
   puma: { n: 'Puma', d: 'Todos pasan 1 carta (a elección) al jugador siguiente.' },
@@ -145,7 +145,7 @@ const others = () => V.players.map((p, i) => ({ p, i })).filter(x => x.i !== V.y
 
 /* ---------------- pantallas: inicio y sala ---------------- */
 function renderHome(prefill) {
-  document.body.classList.remove('in-game');
+  document.body.classList.remove('in-game'); clearRivals();
   ROOM = null; V = null;
   $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button>`;
   const sample = [{ kind: 'sheep', type: 'lucha' }, { kind: 'action', type: 'expose' }, { kind: 'sheep', type: 'dorada' }, { kind: 'attack', type: 'puma' }, { kind: 'sheep', type: 'rock' }];
@@ -176,7 +176,7 @@ async function doJoin() {
 }
 function shareLink() { return `${location.origin}${location.pathname}?sala=${ROOM.code}`; }
 function renderLobby() {
-  document.body.classList.remove('in-game');
+  document.body.classList.remove('in-game'); clearRivals();
   if (!ROOM) return renderHome();
   const isHost = ROOM.you === ROOM.host && ROOM.you >= 0;
   $('#stats').innerHTML = `<button class="btn small" data-a="rules">Reglas</button><button class="btn small" data-a="leave">Salir de la sala</button>`;
@@ -208,9 +208,11 @@ function render() {
   if (!ROOM) return;
   if (ROOM.phase === 'lobby' || !V) { document.documentElement.style.setProperty('--dock', '0px'); return renderLobby(); }
   const pc = peekEl && peekEl.dataset.cid;
-  const hs = $('.hand') ? $('.hand').scrollLeft : 0;
+  // Conserva lo que el jugador estaba desplazando (la tira de rivales vive fuera del tablero y nunca se recrea).
+  const keep = {};
+  [['.hand', 'scrollLeft'], ['.myf', 'scrollLeft'], ['.me', 'scrollTop'], ['.log', 'scrollTop']].forEach(([q, k]) => { const el = $(q); if (el) keep[q + k] = el[k]; });
   renderGame();
-  const hand = $('.hand'); if (hand) hand.scrollLeft = hs;
+  [['.hand', 'scrollLeft'], ['.myf', 'scrollLeft'], ['.me', 'scrollTop'], ['.log', 'scrollTop']].forEach(([q, k]) => { const el = $(q); if (el && keep[q + k] != null) el[k] = keep[q + k]; });
   const dock = $('.me'); document.documentElement.style.setProperty('--dock', dock ? dock.offsetHeight + 'px' : '0px');
   if (!pc) { if (peekEl && !peekEl.isConnected) hidePeek(); return; }
   const el = [...document.querySelectorAll(`.card[data-cid="${pc}"]`)].find(x => !x.closest('#banner'));
@@ -225,6 +227,17 @@ function cardBlurb(c) {
   const k = countMine(c.type), has = hasFlockMine(c.type);
   return `<b>Alpaca ${SH[c.type].n}:</b> ` + (has ? 'ya tienes este rebaño; sirve para pagar, comprar o cambiar.' : `tienes ${k}, te ${3 - k === 1 ? 'falta 1' : 'faltan ' + Math.max(0, 3 - k)} para el rebaño.`) + (canTrade() ? ' Puedes cambiarla con el Campo.' : '');
 }
+// La tira de rivales es un elemento fijo: solo se reemplazan las tarjetas que cambiaron,
+// así no se pierde el desplazamiento ni se corta el deslizamiento con el dedo.
+function renderRivals(html) {
+  const R = $('#rivals'); if (!R) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const fresh = [...tmp.children];
+  if (R.children.length !== fresh.length) { R.innerHTML = ''; fresh.forEach(f => R.appendChild(f)); }
+  else [...R.children].forEach((o, i) => { if (o.outerHTML !== fresh[i].outerHTML) o.replaceWith(fresh[i]); });
+  R.hidden = false;
+}
+function clearRivals() { const R = $('#rivals'); if (R) { R.hidden = true; R.innerHTML = ''; } }
 function timeLeft() { return Math.max(0, Math.ceil((V.deadline + clockSkew - Date.now()) / 1000)); }
 function renderGame() {
   document.body.classList.add('in-game');
@@ -236,6 +249,7 @@ function renderGame() {
     const dots = q.flocks.map(f => { const t = f.wild ? ((f.cards && f.cards[0]) || 'astro') : f.type; return `<i class="${f.exposed ? 'x' : ''}" style="--c:${f.wild ? '#5d6550' : SH[f.type].c}" title="${fname(f)}${f.exposed ? ' (expuesto)' : ''}"><img src="img/${t}.webp" alt=""></i>`; }).join('');
     return `<button class="rv ${on ? 'turn' : ''} ${q.connected || q.bot ? '' : 'off'}" data-rival="${i}" aria-label="Ver a ${esc(q.name)}">${avatar(q.name, i)}<span class="rv-b"><span class="rv-n">${esc(q.name)}</span><span class="rv-s">${q.connected || q.bot ? `${q.handCount} cartas` : 'Desconectado'}</span><span class="rv-f">${dots}<b>${q.flocks.length}/${V.target}</b></span></span>${on ? '<span class="rv-t">turno</span>' : ''}</button>`;
   }).join('');
+  renderRivals(stripH);
   const top = V.discard[V.discard.length - 1];
   const s = selCards(), ops = [], mine = canAct();
   let hint = '';
@@ -258,7 +272,6 @@ function renderGame() {
   const handH = H.map((c, i) => { const f = fresh(c); return cardHTML(c, { cls: (sel.has(c.id) ? 'sel ' : '') + f.cls + (canDragCard(c) ? ' dg' : ''), style: `${f.style}--r:${((i - m) * 2.2).toFixed(1)}deg;--y:${(Math.abs(i - m) * 1.6).toFixed(1)}px;--ov:${!i ? 0 : (H[i - 1].kind !== c.kind ? 14 : H[i - 1].type !== c.type ? ov + 6 : ov)}px;`, attrs: `data-h="${c.id}" aria-pressed="${sel.has(c.id)}"` }); }).join('');
   const myTurnNow = V.turn === V.you && !V.over;
   $('#board').innerHTML = `<div class="game"><div class="zone">
-    <div class="rivals-strip" aria-label="Rivales">${stripH}</div>
     <section class="table" aria-label="Mesa"><p class="label tbl-meta mob-only">Sala ${ROOM.code} · meta ${V.target} rebaños</p><div><p class="label">El Campo</p><div class="field">${V.field.map(c => { const f = fresh(c); return cardHTML(c, { cls: f.cls, style: f.style, attrs: 'tabindex="-1"' }); }).join('') || '<div class="card ghost"></div>'}</div></div>
       <div><p class="label">Pilas</p><div class="pileset"><div class="pile"><div class="deckstack"><div class="card back"></div></div>Mazo · ${V.deck}</div>
       <div class="pile">${top ? cardHTML(top, { attrs: 'data-a="discard" title="Ver descarte"' }) : '<div class="card ghost"></div>'}Descarte · ${V.discard.length}</div></div></div></section>
